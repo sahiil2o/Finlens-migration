@@ -1,9 +1,23 @@
 import { AppState } from "./state.js";
+
 import { parseHDFC } from "./parser.js";
-import { categorizeTransactions } from "./categorizer.js";
-import { renderTable } from "./table.js";
-import { renderSummary } from "./summary.js";
-import { renderCharts } from "./charts.js";
+
+import {
+  categorizeTransactions
+} from "./categorizer.js";
+
+import {
+  renderTable
+} from "./table.js";
+
+import {
+  renderSummary
+} from "./summary.js";
+
+import {
+  renderCharts
+} from "./charts.js";
+
 import {
   initializeFilters,
   refreshFilters
@@ -44,6 +58,16 @@ const elements = {
   errorMsg:
     document.getElementById(
       "error-msg"
+    ),
+
+  vendorList:
+    document.getElementById(
+      "vendor-list"
+    ),
+
+  vendorTotal:
+    document.getElementById(
+      "vendor-total"
     )
 };
 
@@ -181,11 +205,18 @@ async function processFile(file) {
       transactions
     } = parseHDFC(text);
 
-    // Save statement metadata
+    // ===========================
+    // SAVE METADATA
+    // ===========================
+
     AppState.meta = meta;
 
-    // Categorize transactions
+    // ===========================
+    // CATEGORIZE TRANSACTIONS
+    // ===========================
+
     const categorizedTransactions =
+
       categorizeTransactions(
         transactions
       );
@@ -195,26 +226,19 @@ async function processFile(file) {
       categorizedTransactions
     );
 
-    // Save to frontend state
+    // ===========================
+    // INITIAL LOCAL STATE
+    // ===========================
+
     AppState.transactions =
       categorizedTransactions;
 
     AppState.filteredTransactions =
       categorizedTransactions;
 
-    console.log(
-      "Parsed transactions:",
-      transactions
-    );
-
-    console.log(
-      "Statement metadata:",
-      meta
-    );
-
-    // ===============================
-    // INITIAL UI RENDER
-    // ===============================
+    // ===========================
+    // INITIAL RENDER
+    // ===========================
 
     renderDashboard();
 
@@ -226,9 +250,9 @@ async function processFile(file) {
 
     elements.fileInput.value = "";
 
-    // ===============================
+    // ===========================
     // SAVE TO SQLITE
-    // ===============================
+    // ===========================
 
     fetch(
       "http://localhost:3000/transactions",
@@ -246,33 +270,39 @@ async function processFile(file) {
         })
       }
     )
+
     .then(async () => {
 
       console.log(
         "Transactions persisted"
       );
 
-      // ===========================
+      // =======================
       // INITIAL DB SYNC
-      // ===========================
+      // =======================
 
       await loadTransactionsFromDB();
 
-      // ===========================
+      await loadVendorAnalytics();
+
+      // =======================
       // START POLLING
-      // ===========================
+      // =======================
 
       if (!pollingStarted) {
 
         pollingStarted = true;
 
-        setInterval(() => {
+        setInterval(async () => {
 
-          loadTransactionsFromDB();
+          await loadTransactionsFromDB();
+
+          await loadVendorAnalytics();
 
         }, 5000);
       }
     })
+
     .catch(error => {
 
       console.error(
@@ -297,7 +327,7 @@ async function processFile(file) {
 }
 
 // ===============================
-// LOAD FROM SQLITE
+// LOAD TRANSACTIONS FROM SQLITE
 // ===============================
 
 async function loadTransactionsFromDB() {
@@ -305,6 +335,7 @@ async function loadTransactionsFromDB() {
   try {
 
     const response =
+
       await fetch(
         "http://localhost:3000/transactions"
       );
@@ -327,6 +358,114 @@ async function loadTransactionsFromDB() {
       error
     );
   }
+}
+
+// ===============================
+// LOAD VENDOR ANALYTICS
+// ===============================
+
+async function loadVendorAnalytics() {
+
+  try {
+
+    const response =
+
+      await fetch(
+        "http://localhost:3000/vendors/top"
+      );
+
+    const vendors =
+      await response.json();
+
+    renderVendorAnalytics(
+      vendors
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Vendor analytics failed:",
+      error
+    );
+  }
+}
+
+// ===============================
+// RENDER VENDOR ANALYTICS
+// ===============================
+
+function renderVendorAnalytics(
+  vendors
+) {
+
+  if (
+    !Array.isArray(vendors)
+    ||
+    !vendors.length
+  ) {
+
+    elements.vendorList.innerHTML = `
+      <div class="empty-state">
+        No vendor analytics available.
+      </div>
+    `;
+
+    elements.vendorTotal.textContent =
+      "0";
+
+    return;
+  }
+
+  elements.vendorTotal.textContent =
+    vendors.length;
+
+  elements.vendorList.innerHTML =
+
+    vendors.map(vendor => {
+
+      return `
+
+        <div class="vendor-row fade-in">
+
+          <div class="vendor-left">
+
+            <div class="vendor-name">
+              ${vendor.display_name}
+            </div>
+
+            <div class="vendor-meta">
+
+              ${vendor.transaction_count}
+              transactions
+
+            </div>
+
+          </div>
+
+          <div class="vendor-right">
+
+            <div class="vendor-amount">
+
+              ${formatCurrency(
+                vendor.total_spend
+              )}
+
+            </div>
+
+            <div class="vendor-category">
+
+              ${capitalize(
+                vendor.category
+                || "other"
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    }).join("");
 }
 
 // ===============================
@@ -386,4 +525,27 @@ function showError(message) {
       "";
 
   }, 4000);
+}
+
+// ===============================
+// HELPERS
+// ===============================
+
+function formatCurrency(amount) {
+
+  return `₹${Number(amount)
+    .toLocaleString(
+      "en-IN",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }
+    )}`;
+}
+
+function capitalize(text) {
+
+  return text.charAt(0)
+    .toUpperCase()
+    + text.slice(1);
 }

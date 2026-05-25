@@ -430,6 +430,96 @@
   }
 
   /* ===============================
+  VENDOR ANALYTICS
+================================ */
+
+.vendor-row {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 12px 14px;
+
+  background: var(--surface2);
+
+  border: 1px solid var(--border);
+
+  border-radius: 12px;
+
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.vendor-row:hover {
+
+  border-color: var(--border2);
+
+  transform: translateY(-1px);
+}
+
+.vendor-left {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.vendor-name {
+
+  font-size: 0.82rem;
+
+  color: var(--text);
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.vendor-meta {
+
+  font-size: 0.68rem;
+
+  color: var(--muted);
+}
+
+.vendor-right {
+
+  text-align: right;
+
+  flex-shrink: 0;
+}
+
+.vendor-amount {
+
+  font-family: var(--font-head);
+
+  font-size: 0.95rem;
+
+  font-weight: 700;
+}
+
+.vendor-category {
+
+  font-size: 0.68rem;
+
+  color: var(--muted);
+
+  margin-top: 2px;
+}
+
+  /* ===============================
     EMPTY STATES
   ================================ */
 
@@ -520,8 +610,60 @@
       </div>
     </div>
 
-    <!-- Transactions -->
-    <div class="txn-section">
+    </div>
+
+<!-- ══ VENDOR ANALYTICS ══ -->
+<div
+  class="chart-card"
+  style="margin-bottom:2rem"
+>
+
+  <div class="chart-header">
+
+    <div>
+      <p class="chart-title">
+        Top merchants
+      </p>
+
+      <p class="chart-sub">
+        Highest spend vendors
+      </p>
+    </div>
+
+    <div>
+      <p
+        class="chart-total"
+        id="vendor-total"
+      >
+        —
+      </p>
+
+      <p class="chart-total-sub">
+        tracked vendors
+      </p>
+    </div>
+
+  </div>
+
+  <div
+    id="vendor-list"
+    style="
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    "
+  >
+
+    <div class="empty-state">
+      Vendor analytics loading...
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Transactions -->
+<div class="txn-section">
       <div class="txn-header">
         <div>
           <p class="txn-title">All transactions</p>

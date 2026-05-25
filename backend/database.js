@@ -95,6 +95,64 @@ function generateTransactionHash(
 }
 
 // ===============================
+// VALID SPEND CHECK
+// ===============================
+
+function isSpendTransaction(
+  transaction
+) {
+
+  // ===========================
+  // ONLY DEBITS
+  // ===========================
+
+  if (
+    transaction.type !== "debit"
+  ) {
+
+    return false;
+  }
+
+  const description =
+
+    transaction.description
+      ?.toLowerCase() || "";
+
+  // ===========================
+  // EXCLUDE REPAYMENTS
+  // ===========================
+
+  const excludedPatterns = [
+
+    "autopay",
+
+    "thank you",
+
+    "credit card",
+
+    "card payment",
+
+    "cc payment",
+
+    "payment received",
+
+    "cashback",
+
+    "reversal",
+
+    "refund"
+  ];
+
+  return !excludedPatterns.some(
+    pattern =>
+
+      description.includes(
+        pattern
+      )
+  );
+}
+
+// ===============================
 // INSERT / UPDATE VENDOR
 // ===============================
 
@@ -158,7 +216,9 @@ function upsertVendor(
 
           transaction.category,
 
-          transaction.amount,
+          Number(
+            transaction.amount
+          ),
 
           today,
 
@@ -271,12 +331,20 @@ export async function saveTransactions(
           );
 
           // =====================
-          // UPDATE VENDOR TABLE
+          // ONLY TRACK
+          // ACTUAL SPEND
           // =====================
 
-          await upsertVendor(
-            transaction
-          );
+          if (
+            isSpendTransaction(
+              transaction
+            )
+          ) {
+
+            await upsertVendor(
+              transaction
+            );
+          }
         }
 
         stmt.finalize(error => {
