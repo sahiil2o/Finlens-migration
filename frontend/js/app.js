@@ -161,6 +161,11 @@ function setupFileUpload() {
 function handleDragEnter(event) {
 
   event.preventDefault();
+  event.stopPropagation();
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy';
+  }
 
   elements.dropZone.classList.add(
     "drag-over"
@@ -170,14 +175,19 @@ function handleDragEnter(event) {
 function handleDragOver(event) {
 
   event.preventDefault();
+  event.stopPropagation();
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy';
+  }
 
   elements.dropZone.classList.add(
     "drag-over"
   );
 }
 
-function handleDragLeave() {
-
+function handleDragLeave(event) {
+  event.stopPropagation();
   elements.dropZone.classList.remove(
     "drag-over"
   );
@@ -186,13 +196,25 @@ function handleDragLeave() {
 function handleFileDrop(event) {
 
   event.preventDefault();
+  event.stopPropagation();
 
   elements.dropZone.classList.remove(
     "drag-over"
   );
 
-  const file =
-    event.dataTransfer.files[0];
+  if (!event.dataTransfer) return;
+
+  let file = null;
+  if (event.dataTransfer.items) {
+    const item = event.dataTransfer.items[0];
+    if (item && item.kind === 'file') {
+      file = item.getAsFile();
+    }
+  }
+
+  if (!file && event.dataTransfer.files) {
+    file = event.dataTransfer.files[0];
+  }
 
   if (file) {
     processFile(file);
