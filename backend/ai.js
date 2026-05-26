@@ -22,6 +22,9 @@ const VALID_CATEGORIES = [
   "fuel",
   "entertainment",
   "payment",
+  "travel",
+  "health",
+  "investment",
   "other"
 ];
 
@@ -29,7 +32,7 @@ const VALID_CATEGORIES = [
 // LOAD CACHE
 // ===============================
 
-function loadCache() {
+export function loadCache() {
 
   try {
 
@@ -60,7 +63,7 @@ function loadCache() {
 // SAVE CACHE
 // ===============================
 
-function saveCache(cache) {
+export function saveCache(cache) {
 
   fs.writeFileSync(
     CACHE_PATH,
@@ -78,24 +81,40 @@ function saveCache(cache) {
 
 function buildPrompt(vendor) {
 
-  return `
-You are a financial transaction categorizer.
+  return `You are a financial transaction categorizer for personal expenses.
+Categorize the vendor description into one of these strict categories:
+- food: Restaurants, food delivery, cafes, bakeries (e.g. Swiggy, Zomato, Starbucks, Domino's, food joints)
+- grocery: Supermarkets, quick-commerce, organic stores, daily essentials (e.g. Blinkit, Zepto, BigBasket, Instamart)
+- shopping: Apparel, e-commerce, electronics, retail stores, home decor (e.g. Amazon, Flipkart, Myntra, Ajio, Nykaa)
+- bills: Utility bills, internet recharges, phone bills, insurance, subscriptions, school fees (e.g. Jio, Airtel, ACT Broadband, Netflix, Spotify, Acko, insurance)
+- fuel: Petrol pumps, service stations (e.g. HPCL, BPCL, IOCL, shell, fuel)
+- entertainment: Movies, theatres, event bookings, gaming centers (e.g. BookMyShow, PVR, Inox, playzones)
+- payment: Credit card repayments, bank transfers, money received, cashback, refunds
+- travel: Cabs, auto-rickshaws, metro, train bookings, flight tickets, bus rides (e.g., Uber, Ola, IRCTC, MakeMyTrip, Indigo)
+- health: Medical consultations, pharmacies, hospitals, diagnostic centers (e.g., Apollo Pharmacy, Medplus, Practo, clinics)
+- investment: Mutual funds, stocks, trading accounts, bank transfers to brokers (e.g., Groww, Zerodha, AngelOne)
+- other: Professional services, custom taxes, general fees, or anything that doesn't fit the above.
 
-Return ONLY one category.
+Strict Guidelines:
+1. Respond with EXACTLY one category name from the list above. Do not output anything else. No punctuation, no quotes, no conversational filler, and no explanation.
+2. Vendor names might contain transaction metadata, locations, or noise (e.g., "swiggy star bangalore", "acko com gurgaon", "jio p prepaid"). Use the merchant name part to categorize.
 
-Valid categories:
-food
-grocery
-shopping
-bills
-fuel
-entertainment
-payment
-other
+Examples:
+- "SWIGGY STARLTD" -> food
+- "ZEPTO METROPOLIS" -> grocery
+- "AMAZON SELLER SERVICES" -> shopping
+- "NETFLIX COM SGP" -> bills
+- "ACKO GEN INS" -> bills
+- "HPCL PETROL MUMBAI" -> fuel
+- "PVR KORAMANGALA" -> entertainment
+- "CRED PAYMENT" -> payment
+- "UBER RIDE INDIA" -> travel
+- "APOLLO PHARMACY BLR" -> health
+- "GROWW INVT SOLUTIONS" -> investment
+- "SPAYBBPS JIO FIBRE" -> bills
 
-Vendor:
-${vendor}
-`;
+Vendor to categorize: "${vendor}"
+Response (strictly one word):`;
 }
 
 // ===============================

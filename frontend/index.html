@@ -519,6 +519,102 @@
   margin-top: 2px;
 }
 
+/* ===============================
+  SUBSCRIPTION INTELLIGENCE
+================================ */
+
+.subscription-row {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  gap: 16px;
+
+  padding: 14px;
+
+  border-radius: 12px;
+
+  background: var(--surface2);
+
+  border: 1px solid var(--border);
+
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.subscription-row:hover {
+
+  border-color: var(--border2);
+
+  transform: translateY(-1px);
+}
+
+.subscription-left {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.subscription-name {
+
+  font-size: 0.82rem;
+
+  color: var(--text);
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.subscription-meta {
+
+  font-size: 0.68rem;
+
+  color: var(--muted);
+}
+
+.subscription-right {
+
+  text-align: right;
+
+  flex-shrink: 0;
+}
+
+.subscription-amount {
+
+  font-family: var(--font-head);
+
+  font-size: 0.95rem;
+
+  font-weight: 700;
+}
+
+.subscription-confidence {
+
+  font-size: 0.68rem;
+
+  margin-top: 2px;
+}
+
+.subscription-confidence.high {
+  color: var(--green);
+}
+
+.subscription-confidence.medium {
+  color: var(--amber);
+}
+
   /* ===============================
     EMPTY STATES
   ================================ */
@@ -528,6 +624,186 @@
     text-align: center;
     color: #7b8196;
   }
+
+  /* ===============================
+    FORECASTING INSIGHT CHIPS
+  ================================ */
+  .insight-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    border: 1px solid transparent;
+  }
+
+  .insight-pill.warning {
+    background: rgba(255, 90, 90, 0.04);
+    border-color: rgba(255, 90, 90, 0.15);
+    color: #ff9c9c;
+  }
+
+  .insight-pill.success {
+    background: rgba(61, 232, 155, 0.04);
+    border-color: rgba(61, 232, 155, 0.15);
+    color: #7ff0b2;
+  }
+
+  .insight-pill.info {
+    background: rgba(94, 107, 255, 0.04);
+    border-color: rgba(94, 107, 255, 0.15);
+    color: #c4ccff;
+  }
+
+  /* ===============================
+    INTERACTIVE BADGE CHIPS (SELECT)
+  ================================ */
+  select.category-select {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    padding: 3px 20px 3px 8px; /* Room for custom arrow */
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none; /* Hide default arrow */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    transition: background 0.15s;
+    max-width: 140px;
+  }
+  select.category-select:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  select.category-select option {
+    background: #13161e; /* Match var(--surface) */
+    color: var(--text);
+    font-size: 0.8rem;
+  }
+
+  /* ===============================
+    CARDS & ACCOUNTS SELECTOR STRIP
+  ================================ */
+  .account-card {
+    flex: 0 0 210px;
+    background: linear-gradient(135deg, rgba(26,30,41,0.9), rgba(19,22,30,0.9));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 105px;
+    position: relative;
+    overflow: hidden;
+  }
+  .account-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+  }
+  .account-card.active {
+    border-color: var(--accent2);
+    background: linear-gradient(135deg, rgba(94,107,255,0.12), rgba(19,22,30,0.9));
+    box-shadow: 0 8px 24px rgba(94,107,255,0.06);
+  }
+  .account-card.overview.active {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(232,245,78,0.08), rgba(19,22,30,0.9));
+    box-shadow: 0 8px 24px rgba(232,245,78,0.06);
+  }
+  .account-card-title {
+    font-family: var(--font-head);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .account-card-subtitle {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .account-card-spend {
+    font-family: var(--font-head);
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-top: 14px;
+    color: var(--text);
+  }
+  .account-card-chip {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    width: 24px;
+    height: 18px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* ── PREMIUM TAB NAVIGATION ── */
+  .tabs-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 2rem;
+    border-bottom: 1.5px solid var(--border);
+    padding-bottom: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+    z-index: 10;
+  }
+  .tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-button {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-family: var(--font-head);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-button:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .tab-button.active {
+    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 4px 14px rgba(232, 245, 78, 0.25);
+  }
+
+  .tab-content {
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    transition: opacity 0.2s ease-in-out;
+  }
+  .tab-content.active {
+    height: auto;
+    overflow: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
 </style>
 </head>
 <body>
@@ -535,25 +811,25 @@
 <!-- ══ UPLOAD SCREEN ══ -->
 <div id="upload-screen">
   <p class="upload-logo">Fin<span>Lens</span></p>
-  <p class="upload-tagline">Credit card statement analyser</p>
+  <p class="upload-tagline">Credit card & Savings statement analyser</p>
 
   <div class="drop-zone" id="dropZone" >
-    <input type="file" id="fileInput" accept=".csv">
+    <input type="file" id="fileInput" accept=".csv,.xls">
     <div class="drop-icon">📄</div>
     <p class="drop-title">Drop your statement here</p>
     <p class="drop-sub">
-      Works with <em>HDFC</em> credit card CSV statements<br>
-      exported from NetBanking or the HDFC app
+      Works with <em>HDFC</em> Credit Card CSV statements<br>
+      or legacy Savings Account XLS statements
     </p>
   </div>
 
   <div class="banks-row">
-    <span class="bank-pill">HDFC Credit Card</span>
-    <span class="bank-pill">~|~ delimiter</span>
+    <span class="bank-pill">HDFC Credit Card (CSV)</span>
+    <span class="bank-pill">HDFC Savings / OD (XLS)</span>
     <span class="bank-pill">Any billing cycle</span>
   </div>
 
-  <p class="privacy-note">🔒 Everything runs in your browser — no data leaves your device</p>
+  <p class="privacy-note">🔒 Local-first processing — no financial data leaves your local network</p>
   <p class="error-msg" id="error-msg"></p>
 </div>
 
@@ -572,125 +848,171 @@
   </nav>
 
   <div class="main">
+    <!-- 💳 CARDS & ACCOUNTS SELECTOR STRIP -->
+    <div id="accounts-strip" style="display:flex; gap:16px; margin-bottom:2rem; overflow-x:auto; padding-bottom:10px; scrollbar-width: none;"></div>
+
     <!-- Summary strip -->
     <div class="summary-strip" id="summary-strip"></div>
 
     <!-- Utilisation -->
     <div class="util-section" id="util-section"></div>
 
-    <!-- Charts -->
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <p class="chart-title">Spending by category</p>
-            <p class="chart-sub">Debits only, this cycle</p>
+    <!-- Premium Tab Navigation Bar -->
+    <div class="tabs-container">
+      <button class="tab-button active" data-tab="spend" onclick="switchTab('spend')">📊 Spend Analysis</button>
+      <button class="tab-button" data-tab="cashflow" onclick="switchTab('cashflow')">📈 Cashflow & Alerts</button>
+      <button class="tab-button" data-tab="merchants" onclick="switchTab('merchants')">🏆 Top Merchants</button>
+      <button class="tab-button" data-tab="transactions" onclick="switchTab('transactions')">🧾 Transactions</button>
+    </div>
+
+    <!-- Tab 1: Spend Analysis (Donut Chart & Daily Spend Timeline) -->
+    <div id="tab-spend" class="tab-content active">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <p class="chart-title">Spending by category</p>
+              <p class="chart-sub">Debits only, this cycle</p>
+            </div>
+            <div>
+              <p class="chart-total" id="cat-total">—</p>
+              <p class="chart-total-sub">total spend</p>
+            </div>
           </div>
-          <div>
-            <p class="chart-total" id="cat-total">—</p>
-            <p class="chart-total-sub">total spend</p>
+          <div class="legend-grid" id="cat-legend"></div>
+          <div style="position:relative; height:220px">
+            <canvas id="catChart" role="img" aria-label="Donut chart showing spending by category"></canvas>
           </div>
         </div>
-        <div class="legend-grid" id="cat-legend"></div>
-        <div style="position:relative; height:220px">
-          <canvas id="catChart" role="img" aria-label="Donut chart showing spending by category"></canvas>
-        </div>
-      </div>
 
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <p class="chart-title">Daily spend timeline</p>
-            <p class="chart-sub">Purchases per day</p>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <p class="chart-title">Daily spend timeline</p>
+              <p class="chart-sub">Purchases per day</p>
+            </div>
+          </div>
+          <div style="position:relative; height:270px">
+            <canvas id="timeChart" role="img" aria-label="Bar chart of daily spending"></canvas>
           </div>
         </div>
-        <div style="position:relative; height:270px">
-          <canvas id="timeChart" role="img" aria-label="Bar chart of daily spending"></canvas>
+      </div>
+    </div>
+
+    <!-- Tab 2: Cashflow & Alerts (Trends credit/debit & spend forecasts insights) -->
+    <div id="tab-cashflow" class="tab-content">
+      <div class="charts-grid fade-in" style="margin-top:0; margin-bottom:2rem;">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <p class="chart-title">Historical cashflow trends</p>
+              <p class="chart-sub">Credits vs Spend over time</p>
+            </div>
+          </div>
+          <div style="position:relative; height:240px">
+            <canvas id="trendChart" role="img" aria-label="Line chart showing credits and debits cashflow trends"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <p class="chart-title">🔮 Spend forecast & alerts</p>
+              <p class="chart-sub">Predictive weighted moving average</p>
+            </div>
+            <div>
+              <p class="chart-total" id="forecast-value">—</p>
+              <p class="chart-total-sub">projected spend</p>
+            </div>
+          </div>
+          <div id="forecast-insights" style="display:flex; flex-direction:column; gap:10px; margin-top:15px; overflow-y:auto; max-height:220px;">
+            <div class="empty-state">No trend insights available. Upload statements across multiple cycles.</div>
+          </div>
         </div>
       </div>
     </div>
 
-    </div>
+    <!-- Tab 3: Top Merchants & Subscriptions -->
+    <div id="tab-merchants" class="tab-content">
+      <div class="charts-grid" style="margin-bottom:2rem">
+        <!-- ══ VENDOR ANALYTICS ══ -->
+        <div class="chart-card" style="margin-bottom:0">
+          <div class="chart-header">
+            <div>
+              <p class="chart-title">Top merchants</p>
+              <p class="chart-sub">Highest spend vendors</p>
+            </div>
+            <div>
+              <p class="chart-total" id="vendor-total">—</p>
+              <p class="chart-total-sub">tracked vendors</p>
+            </div>
+          </div>
+          <div id="vendor-list" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="empty-state">Vendor analytics loading...</div>
+          </div>
+        </div>
 
-<!-- ══ VENDOR ANALYTICS ══ -->
-<div
-  class="chart-card"
-  style="margin-bottom:2rem"
->
-
-  <div class="chart-header">
-
-    <div>
-      <p class="chart-title">
-        Top merchants
-      </p>
-
-      <p class="chart-sub">
-        Highest spend vendors
-      </p>
-    </div>
-
-    <div>
-      <p
-        class="chart-total"
-        id="vendor-total"
-      >
-        —
-      </p>
-
-      <p class="chart-total-sub">
-        tracked vendors
-      </p>
-    </div>
-
-  </div>
-
-  <div
-    id="vendor-list"
-    style="
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    "
-  >
-
-    <div class="empty-state">
-      Vendor analytics loading...
-    </div>
-
-  </div>
-
-</div>
-
-<!-- Transactions -->
-<div class="txn-section">
-      <div class="txn-header">
-        <div>
-          <p class="txn-title">All transactions</p>
-          <p class="txn-count" id="txn-count"></p>
+        <!-- ══ SUBSCRIPTION INTELLIGENCE ══ -->
+        <div class="chart-card" style="margin-bottom:0">
+          <div class="chart-header">
+            <div>
+              <p class="chart-title">Recurring subscriptions</p>
+              <p class="chart-sub">Detected recurring payments</p>
+            </div>
+            <div>
+              <p class="chart-total" id="subscription-total">—</p>
+              <p class="chart-total-sub">recurring vendors</p>
+            </div>
+          </div>
+          <div id="subscription-list" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="empty-state">Subscription intelligence loading...</div>
+          </div>
         </div>
       </div>
-      <div class="filters">
-        <input type="text" id="search" placeholder="Search description...">
-        <select id="catFilter"><option value="">All categories</option></select>
-        <select id="typeFilter">
-          <option value="">All</option>
-          <option value="debit">Debits only</option>
-          <option value="credit">Credits only</option>
-        </select>
+    </div>
+
+    <!-- Tab 4: Transactions Table -->
+    <div id="tab-transactions" class="tab-content">
+      <div class="txn-section">
+        <div class="txn-header">
+          <div>
+            <p class="txn-title">All transactions</p>
+            <p class="txn-count" id="txn-count"></p>
+          </div>
+        </div>
+        <div class="filters">
+          <input type="text" id="search" placeholder="Search description...">
+          <select id="monthFilter"><option value="">All months</option></select>
+          <select id="catFilter"><option value="">All categories</option></select>
+          <select id="typeFilter">
+            <option value="">All transactions</option>
+            <option value="debit">Debits only</option>
+            <option value="credit">Credits only</option>
+          </select>
+          <select id="sortFilter">
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="amount-desc">Amount: High to Low</option>
+            <option value="amount-asc">Amount: Low to High</option>
+            <option value="desc-asc">Description: A to Z</option>
+            <option value="desc-desc">Description: Z to A</option>
+            <option value="cat-asc">Category: A to Z</option>
+            <option value="cat-desc">Category: Z to A</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th id="th-description" style="width:200px; cursor:pointer; user-select:none" onclick="sortByHeader('description')">Description</th>
+              <th id="th-category" style="width:95px; cursor:pointer; user-select:none" onclick="sortByHeader('category')">Category</th>
+              <th id="th-amount" style="width:70px; text-align:right; cursor:pointer; user-select:none" onclick="sortByHeader('amount')">Amount</th>
+              <th style="width:60px; text-align:center; user-select:none">Type</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <p class="no-results" id="no-results" style="display:none">No transactions match your filters.</p>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:200px">Description</th>
-            <th style="width:95px">Category</th>
-            <th style="width:70px; text-align:right">Amount</th>
-            <th style="width:60px; text-align:center">Type</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-      <p class="no-results" id="no-results" style="display:none">No transactions match your filters.</p>
     </div>
   </div>
 </div>

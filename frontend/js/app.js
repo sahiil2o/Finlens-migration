@@ -29,6 +29,10 @@ import {
   showToast
 } from "./ui.js";
 
+import {
+  renderTrends
+} from "./trends.js";
+
 // ===============================
 // DOM ELEMENTS
 // ===============================
@@ -68,6 +72,16 @@ const elements = {
   vendorTotal:
     document.getElementById(
       "vendor-total"
+    ),
+
+  subscriptionList:
+    document.getElementById(
+      "subscription-list"
+    ),
+
+  subscriptionTotal:
+    document.getElementById(
+      "subscription-total"
     )
 };
 
@@ -75,7 +89,7 @@ const elements = {
 // GLOBALS
 // ===============================
 
-let pollingStarted = false;
+let pollingInterval = null;
 
 // ===============================
 // INITIALIZE APP
@@ -83,7 +97,7 @@ let pollingStarted = false;
 
 initializeApp();
 
-function initializeApp() {
+async function initializeApp() {
 
   setupFileUpload();
 
@@ -92,6 +106,9 @@ function initializeApp() {
   console.log(
     "FinLens initialized"
   );
+
+  // Auto-load data from local DB on startup
+  await syncAndPoll();
 }
 
 // ===============================
@@ -100,13 +117,11 @@ function initializeApp() {
 
 function setupFileUpload() {
 
-  // File picker
   elements.fileInput.addEventListener(
     "change",
     handleFileSelection
   );
 
-  // Dropzone click
   elements.dropZone.addEventListener(
     "click",
     () => {
@@ -114,19 +129,16 @@ function setupFileUpload() {
     }
   );
 
-  // Drag over
   elements.dropZone.addEventListener(
     "dragover",
     handleDragOver
   );
 
-  // Drag leave
   elements.dropZone.addEventListener(
     "dragleave",
     handleDragLeave
   );
 
-  // Drop
   elements.dropZone.addEventListener(
     "drop",
     handleFileDrop
@@ -191,29 +203,38 @@ async function processFile(file) {
 
   try {
 
-    showLoader(
-      "Parsing statement..."
-    );
+    validateFile(file);
 
-    validateCSV(file);
+    let meta, transactions;
 
-    const text =
-      await file.text();
+    if (file.name.toLowerCase().endsWith(".xls")) {
+      showLoader("Parsing legacy XLS statement...");
+      const buffer = await file.arrayBuffer();
+      const response = await fetch("http://localhost:3000/parse-xls", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream"
+        },
+        body: buffer
+      });
 
-    const {
-      meta,
-      transactions
-    } = parseHDFC(text);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to parse legacy XLS statement");
+      }
 
-    // ===========================
-    // SAVE METADATA
-    // ===========================
+      const result = await response.json();
+      meta = result.meta;
+      transactions = result.transactions;
+    } else {
+      showLoader("Parsing CSV statement...");
+      const text = await file.text();
+      const result = parseHDFC(text);
+      meta = result.meta;
+      transactions = result.transactions;
+    }
 
-    AppState.meta = meta;
-
-    // ===========================
-    // CATEGORIZE TRANSACTIONS
-    // ===========================
+    saveAccountMeta(meta);
 
     const categorizedTransactions =
 
@@ -226,19 +247,11 @@ async function processFile(file) {
       categorizedTransactions
     );
 
-    // ===========================
-    // INITIAL LOCAL STATE
-    // ===========================
-
     AppState.transactions =
       categorizedTransactions;
 
     AppState.filteredTransactions =
       categorizedTransactions;
-
-    // ===========================
-    // INITIAL RENDER
-    // ===========================
 
     renderDashboard();
 
@@ -249,10 +262,6 @@ async function processFile(file) {
     );
 
     elements.fileInput.value = "";
-
-    // ===========================
-    // SAVE TO SQLITE
-    // ===========================
 
     fetch(
       "http://localhost:3000/transactions",
@@ -277,30 +286,7 @@ async function processFile(file) {
         "Transactions persisted"
       );
 
-      // =======================
-      // INITIAL DB SYNC
-      // =======================
-
-      await loadTransactionsFromDB();
-
-      await loadVendorAnalytics();
-
-      // =======================
-      // START POLLING
-      // =======================
-
-      if (!pollingStarted) {
-
-        pollingStarted = true;
-
-        setInterval(async () => {
-
-          await loadTransactionsFromDB();
-
-          await loadVendorAnalytics();
-
-        }, 5000);
-      }
+      await syncAndPoll();
     })
 
     .catch(error => {
@@ -349,6 +335,10 @@ async function loadTransactionsFromDB() {
     AppState.filteredTransactions =
       transactions;
 
+    if (transactions && transactions.length > 0) {
+      showDashboard();
+    }
+
     refreshFilters();
 
   } catch (error) {
@@ -360,18 +350,15 @@ async function loadTransactionsFromDB() {
   }
 }
 
-// ===============================
-// LOAD VENDOR ANALYTICS
-// ===============================
-
 async function loadVendorAnalytics() {
 
   try {
 
+    const accountId = AppState.filters?.accountId || "";
     const response =
 
       await fetch(
-        "http://localhost:3000/vendors/top"
+        `http://localhost:3000/vendors/top?accountId=${encodeURIComponent(accountId)}`
       );
 
     const vendors =
@@ -385,6 +372,37 @@ async function loadVendorAnalytics() {
 
     console.error(
       "Vendor analytics failed:",
+      error
+    );
+  }
+}
+
+// ===============================
+// LOAD SUBSCRIPTION ANALYTICS
+// ===============================
+
+async function loadSubscriptionAnalytics() {
+
+  try {
+
+    const accountId = AppState.filters?.accountId || "";
+    const response =
+
+      await fetch(
+        `http://localhost:3000/subscriptions?accountId=${encodeURIComponent(accountId)}`
+      );
+
+    const subscriptions =
+      await response.json();
+
+    renderSubscriptionAnalytics(
+      subscriptions
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Subscription analytics failed:",
       error
     );
   }
@@ -469,19 +487,153 @@ function renderVendorAnalytics(
 }
 
 // ===============================
+// RENDER SUBSCRIPTION ANALYTICS
+// ===============================
+
+function renderSubscriptionAnalytics(
+  subscriptions
+) {
+
+  if (
+    !Array.isArray(subscriptions)
+    ||
+    !subscriptions.length
+  ) {
+
+    elements.subscriptionList.innerHTML = `
+      <div class="empty-state">
+        No recurring subscriptions detected.
+      </div>
+    `;
+
+    elements.subscriptionTotal.textContent =
+      "0";
+
+    return;
+  }
+
+  const recurringTotal =
+
+    subscriptions.reduce(
+      (sum, subscription) =>
+
+        sum +
+        Number(
+          subscription.averageAmount
+        ),
+
+      0
+    );
+
+  elements.subscriptionTotal.textContent =
+    formatCurrency(
+      recurringTotal
+    );
+
+  elements.subscriptionList.innerHTML =
+
+    subscriptions.map(
+      subscription => {
+
+        const confidenceClass =
+
+          subscription.confidence >= 80
+
+            ? "high"
+
+            : "medium";
+
+        return `
+
+          <div
+            class="
+              subscription-row
+              fade-in
+            "
+          >
+
+            <div
+              class="
+                subscription-left
+              "
+            >
+
+              <div
+                class="
+                  subscription-name
+                "
+              >
+                ${subscription.displayName}
+              </div>
+
+              <div
+                class="
+                  subscription-meta
+                "
+              >
+
+                Every
+                ${subscription.averageGapDays}
+                days
+
+                ·
+
+                ${subscription.recurringCount}
+                charges
+
+              </div>
+
+            </div>
+
+            <div
+              class="
+                subscription-right
+              "
+            >
+
+              <div
+                class="
+                  subscription-amount
+                "
+              >
+
+                ${formatCurrency(
+                  subscription.averageAmount
+                )}
+
+              </div>
+
+              <div
+                class="
+                  subscription-confidence
+                  ${confidenceClass}
+                "
+              >
+
+                ${subscription.confidence}%
+                confidence
+
+              </div>
+
+            </div>
+
+          </div>
+        `;
+      }
+    ).join("");
+}
+
+// ===============================
 // VALIDATION
 // ===============================
 
-function validateCSV(file) {
+function validateFile(file) {
 
-  if (
-    !file.name
-      .toLowerCase()
-      .endsWith(".csv")
-  ) {
+  const name = file.name.toLowerCase();
+  if (!name.endsWith(".csv") && !name.endsWith(".xls")) {
 
     throw new Error(
-      "Please upload an HDFC CSV statement."
+      "Please upload an HDFC CSV or XLS statement."
     );
   }
 }
@@ -512,6 +664,11 @@ function showDashboard() {
 
   elements.dashboard.style.display =
     "block";
+
+  // Restore or default tab
+  if (window.switchTab) {
+    window.switchTab(AppState.activeTab || "spend");
+  }
 }
 
 function showError(message) {
@@ -525,6 +682,56 @@ function showError(message) {
       "";
 
   }, 4000);
+}
+
+// ===============================
+// TAB LIFE CYCLE MANAGER
+// ===============================
+window.switchTab = function(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.classList.remove('active');
+  });
+  const target = document.getElementById(`tab-${tabId}`);
+  if (target) {
+    target.classList.add('active');
+  }
+
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const activeBtn = document.querySelector(`.tab-button[data-tab="${tabId}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+  }
+
+  AppState.activeTab = tabId;
+};
+
+window.syncAndPoll = syncAndPoll;
+
+async function syncAndPoll() {
+  await loadTransactionsFromDB();
+  await loadVendorAnalytics();
+  await loadSubscriptionAnalytics();
+  await renderTrends();
+
+  // Poller strictly activates ONLY while transactions are being processed by local AI
+  const hasEnriching = AppState.transactions.some(
+    t => t.category === "other" && Number(t.ai_categorized) === 0
+  );
+
+  if (hasEnriching) {
+    if (!pollingInterval) {
+      console.log("AI enrichment in progress. Booting background poller...");
+      pollingInterval = setInterval(syncAndPoll, 5000);
+    }
+  } else {
+    if (pollingInterval) {
+      console.log("AI enrichment complete. Shutting down background poller.");
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+    }
+  }
 }
 
 // ===============================
@@ -548,4 +755,52 @@ function capitalize(text) {
   return text.charAt(0)
     .toUpperCase()
     + text.slice(1);
+}
+
+// ===============================
+// CHRONOLOGICAL METADATA MERGING
+// ===============================
+function saveAccountMeta(meta) {
+  if (!meta || !meta.accountId) return;
+
+  const key = `meta_${meta.accountId}`;
+  const existingRaw = localStorage.getItem(key);
+
+  if (existingRaw) {
+    try {
+      const existing = JSON.parse(existingRaw);
+
+      const parseDateStr = (dateStr) => {
+        if (!dateStr) return new Date(0);
+        const parts = dateStr.split("/");
+        if (parts.length === 3) {
+          let [dd, mm, yyyy] = parts;
+          if (yyyy.length === 2) yyyy = "20" + yyyy;
+          return new Date(`${yyyy}-${mm}-${dd}`);
+        }
+        return new Date(dateStr);
+      };
+
+      const existingDate = parseDateStr(existing.stmtDate);
+      const newDate = parseDateStr(meta.stmtDate);
+
+      // Overwrite ONLY if the uploaded statement is newer or equal
+      if (newDate >= existingDate) {
+        existing.totalDue = meta.totalDue;
+        existing.stmtDate = meta.stmtDate;
+      }
+
+      existing.odLimit = meta.odLimit || existing.odLimit || 0;
+      existing.accountType = meta.accountType || existing.accountType || "savings";
+      
+      localStorage.setItem(key, JSON.stringify(existing));
+      AppState.meta = existing;
+      return;
+    } catch (e) {
+      console.error("Failed to merge account metadata:", e);
+    }
+  }
+
+  localStorage.setItem(key, JSON.stringify(meta));
+  AppState.meta = meta;
 }

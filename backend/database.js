@@ -260,11 +260,20 @@ export async function saveTransactions(
         category,
         type,
         transaction_hash,
-        ai_categorized
+        ai_categorized,
+        source_bank,
+        statement_date
 
       )
 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const updateStmt = db.prepare(`
+      UPDATE transactions 
+      SET source_bank = ?, 
+          statement_date = ? 
+      WHERE transaction_hash = ? AND (source_bank IS NULL OR source_bank = '' OR source_bank = 'HDFC')
     `);
 
     db.serialize(async () => {
@@ -327,7 +336,20 @@ export async function saveTransactions(
             // ai_categorized
             transaction.aiCategorized
               ? 1
-              : 0
+              : 0,
+
+            // source_bank
+            transaction.sourceBank || "HDFC",
+
+            // statement_date
+            transaction.statementDate || null
+          );
+
+          // Defensive update to heal any existing records with missing card metadata
+          updateStmt.run(
+            transaction.sourceBank || "HDFC",
+            transaction.statementDate || null,
+            hash
           );
 
           // =====================
@@ -347,7 +369,8 @@ export async function saveTransactions(
           }
         }
 
-        stmt.finalize(error => {
+        stmt.finalize();
+        updateStmt.finalize(error => {
 
           if (error) {
 

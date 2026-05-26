@@ -58,10 +58,7 @@ async function processQueue() {
           transaction.normalizedMerchant
         );
 
-      if (
-        category &&
-        category !== "other"
-      ) {
+      if (category) {
 
         await updateVendorCategory(
           transaction.normalizedMerchant,

@@ -15,7 +15,18 @@ export const CATEGORIES = {
       "eatclub",
       "pizza",
       "cafe",
-      "coffee"
+      "coffee",
+      "baskin",
+      "cream stone",
+      "meghana",
+      "food plaza",
+      "sizzler",
+      "kabab",
+      "bakery",
+      "bakes",
+      "burger",
+      "kfc",
+      "mcdonald"
     ]
   },
 
@@ -27,7 +38,11 @@ export const CATEGORIES = {
       "blinkit",
       "bigbasket",
       "instamart",
-      "grofers"
+      "grofers",
+      "dmart",
+      "reliance fresh",
+      "supermarket",
+      "grocery"
     ]
   },
 
@@ -39,7 +54,12 @@ export const CATEGORIES = {
       "flipkart",
       "myntra",
       "ajio",
-      "nykaa"
+      "nykaa",
+      "shoppee",
+      "decathlon",
+      "zara",
+      "lifestyle",
+      "fashion"
     ]
   },
 
@@ -51,9 +71,19 @@ export const CATEGORIES = {
       "jio",
       "vi ",
       "bsnl",
-      "netflix",
-      "spotify",
-      "insurance"
+      "broadband",
+      "act fibernet",
+      "insurance",
+      "acko",
+      "rent",
+      "sowerent",
+      "maintenance",
+      "electricity",
+      "power",
+      "water",
+      "tax",
+      "emi",
+      "society"
     ]
   },
 
@@ -65,7 +95,11 @@ export const CATEGORIES = {
       "fuel",
       "hpcl",
       "bpcl",
-      "iocl"
+      "iocl",
+      "shell",
+      "gasoline",
+      "autocraft",
+      "auto craft"
     ]
   },
 
@@ -76,7 +110,13 @@ export const CATEGORIES = {
       "bookmyshow",
       "pvr",
       "inox",
-      "hotstar"
+      "hotstar",
+      "youtube",
+      "netflix",
+      "spotify",
+      "gaming",
+      "steam",
+      "playstation"
     ]
   },
 
@@ -87,7 +127,52 @@ export const CATEGORIES = {
       "payment",
       "autopay",
       "refund",
-      "cashback"
+      "cashback",
+      "reversal",
+      "transfer"
+    ]
+  },
+
+  travel: {
+    label: "Travel & Cabs",
+    color: "#38bdf8",
+    keywords: [
+      "uber",
+      "ola",
+      "irctc",
+      "cab",
+      "travel",
+      "flight",
+      "metro",
+      "indigo",
+      "rapido"
+    ]
+  },
+
+  health: {
+    label: "Health & Pharma",
+    color: "#ec4899",
+    keywords: [
+      "pharma",
+      "medical",
+      "hospital",
+      "clinic",
+      "apollo",
+      "medplus",
+      "practo"
+    ]
+  },
+
+  investment: {
+    label: "Investment",
+    color: "#10b981",
+    keywords: [
+      "groww",
+      "zerodha",
+      "mutual",
+      "broker",
+      "securities",
+      "investment"
     ]
   },
 
