@@ -794,9 +794,13 @@ function saveAccountMeta(meta) {
       if (newDate >= existingDate) {
         existing.totalDue = meta.totalDue;
         existing.stmtDate = meta.stmtDate;
+        existing.dueDate = meta.dueDate || existing.dueDate;
+        existing.availableLimit = meta.availableLimit || existing.availableLimit;
       }
 
       existing.odLimit = meta.odLimit || existing.odLimit || 0;
+      existing.creditLimit = meta.creditLimit || existing.creditLimit || 0;
+      existing.cardLast4 = meta.cardLast4 || existing.cardLast4 || "";
       existing.accountType = meta.accountType || existing.accountType || "savings";
       
       localStorage.setItem(key, JSON.stringify(existing));

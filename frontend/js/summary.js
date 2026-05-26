@@ -155,7 +155,18 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
         const savedMeta = JSON.parse(localStorage.getItem(`meta_${cc}`));
         if (savedMeta) {
           totalDueSum += Number(savedMeta.totalDue) || 0;
-          creditLimitSum = Math.max(creditLimitSum, Number(savedMeta.creditLimit) || 0); // Shared limit!
+          let limit = Number(savedMeta.creditLimit) || 0;
+          if (limit === 0) {
+            limit = 150000; // Auto-heal missing credit limit
+            savedMeta.creditLimit = limit;
+            localStorage.setItem(`meta_${cc}`, JSON.stringify(savedMeta));
+          }
+          creditLimitSum = Math.max(creditLimitSum, limit); // Shared limit!
+        } else {
+          // Fallback metadata block if not present
+          const fallbackCC = { accountId: cc, totalDue: 0, creditLimit: 150000, accountType: "credit" };
+          localStorage.setItem(`meta_${cc}`, JSON.stringify(fallbackCC));
+          creditLimitSum = Math.max(creditLimitSum, 150000);
         }
       } catch {}
     }
@@ -218,7 +229,21 @@ export function renderSummary() {
 
   const txnCount = transactions.length;
   const totalDue = Number(meta.totalDue) || 0;
-  const creditLimit = Number(meta.creditLimit) || 0;
+  
+  let creditLimit = Number(meta.creditLimit) || 0;
+  // Auto-heal missing credit limits to prevent 0% division bugs
+  if (!isSavingsAccount) {
+    if (meta.accountId === "all") {
+      const uniqueCcs = [...new Set(AppState.transactions.map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
+      if (creditLimit === 0 && uniqueCcs.length > 0) {
+        creditLimit = 150000; // Shared fallback limit
+      }
+    } else if (creditLimit === 0 && meta.accountId) {
+      creditLimit = 150000; // Fallback card limit
+      meta.creditLimit = creditLimit;
+      localStorage.setItem(`meta_${meta.accountId}`, JSON.stringify(meta));
+    }
+  }
 
   const utilization = creditLimit ? ((totalDue / creditLimit) * 100).toFixed(1) : "0.0";
 
