@@ -316,6 +316,13 @@ export function renderSummary() {
       utilSection.style.display = "none";
     }
   } else {
+    const isHigh = utilization > 30;
+    const isCritical = utilization > 70;
+    const statusClass = isHigh ? "warn" : "good";
+    const statusText = isCritical ? "Critical Usage" : (isHigh ? "High usage" : "Healthy");
+    const statusStyle = isCritical ? "color: var(--red); border-color: var(--red);" : "";
+    const barColor = isCritical ? "var(--red)" : (isHigh ? "var(--amber)" : "var(--green)");
+
     utilSection.style.display = "flex";
     utilSection.innerHTML = `
       <div class="util-label-group">
@@ -325,7 +332,7 @@ export function renderSummary() {
 
       <div class="util-bar-wrap">
         <div class="util-track">
-          <div class="util-fill" style="width:${Math.min(utilization, 100)}%"></div>
+          <div class="util-fill" style="width:${Math.min(utilization, 100)}%; background: ${barColor};"></div>
         </div>
         <div class="util-meta">
           <span>Used: ${formatCurrency(totalDue)}</span>
@@ -333,8 +340,8 @@ export function renderSummary() {
         </div>
       </div>
 
-      <div class="util-status ${utilization > 30 ? "warn" : "good"}">
-        ${utilization > 30 ? "High usage" : "Healthy"}
+      <div class="util-status ${statusClass}" style="${statusStyle}">
+        ${statusText}
       </div>
     `;
   }
