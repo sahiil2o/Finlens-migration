@@ -353,6 +353,8 @@ async function loadTransactionsFromDB() {
       "DB sync failed:",
       error
     );
+    // Dynamic diagnostic toast to alert the user of the exact JS crash trace
+    showToast("Boot Error: " + error.message, "error");
   }
 }
 
