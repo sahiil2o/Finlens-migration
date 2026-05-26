@@ -130,6 +130,11 @@ function setupFileUpload() {
   );
 
   elements.dropZone.addEventListener(
+    "dragenter",
+    handleDragEnter
+  );
+
+  elements.dropZone.addEventListener(
     "dragover",
     handleDragOver
   );
@@ -143,11 +148,24 @@ function setupFileUpload() {
     "drop",
     handleFileDrop
   );
+
+  // Prevent default drag and drop behaviors on window level to avoid navigating away
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => e.preventDefault());
 }
 
 // ===============================
 // DRAG EVENTS
 // ===============================
+
+function handleDragEnter(event) {
+
+  event.preventDefault();
+
+  elements.dropZone.classList.add(
+    "drag-over"
+  );
+}
 
 function handleDragOver(event) {
 
@@ -713,6 +731,13 @@ window.switchTab = function(tabId) {
   }
 
   AppState.activeTab = tabId;
+};
+
+window.resetApp = function() {
+  elements.uploadScreen.style.display = "flex";
+  elements.dashboard.style.display = "none";
+  elements.fileInput.value = "";
+  elements.errorMsg.textContent = "";
 };
 
 window.syncAndPoll = syncAndPoll;
