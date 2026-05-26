@@ -148,7 +148,7 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
     // Overview aggregates credit cards (handling shared limit)
     let totalDueSum = 0;
     let creditLimitSum = 0;
-    const uniqueCcs = [...new Set(AppState.transactions.map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
+    const uniqueCcs = [...new Set((AppState.transactions || []).map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
     
     for (const cc of uniqueCcs) {
       try {
@@ -234,7 +234,7 @@ export function renderSummary() {
   // Auto-heal missing credit limits to prevent 0% division bugs
   if (!isSavingsAccount) {
     if (meta.accountId === "all") {
-      const uniqueCcs = [...new Set(AppState.transactions.map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
+      const uniqueCcs = [...new Set((AppState.transactions || []).map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
       if (creditLimit === 0 && uniqueCcs.length > 0) {
         creditLimit = 150000; // Shared fallback limit
       }
