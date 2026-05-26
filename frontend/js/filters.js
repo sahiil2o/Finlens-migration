@@ -111,14 +111,20 @@ export function applyFilters() {
   // MONTH / DATE SLICER FILTER
   // ===============================
   if (month) {
-    filtered = filtered.filter(t => {
-      if (!t.date) return false;
-      const d = new Date(t.date);
-      if (isNaN(d.getTime())) return false;
-      const year = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      return `${year}-${m}` === month;
-    });
+    if (month.startsWith("stmt:")) {
+      const targetStmt = month.replace("stmt:", "");
+      filtered = filtered.filter(t => t.statementDate === targetStmt);
+    } else if (month.startsWith("month:")) {
+      const targetMonth = month.replace("month:", "");
+      filtered = filtered.filter(t => {
+        if (!t.date) return false;
+        const d = new Date(t.date);
+        if (isNaN(d.getTime())) return false;
+        const year = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${m}` === targetMonth;
+      });
+    }
   }
 
   // ===============================
@@ -320,33 +326,96 @@ export function refreshFilters() {
 // ===============================
 export function populateMonthFilter() {
   if (!monthFilter) return;
-  const currentValue = monthFilter.value;
 
-  // Extract unique year-months chronologically descending
-  const months = [...new Set(AppState.transactions.map(t => {
-    if (!t.date) return null;
-    const d = new Date(t.date);
-    if (isNaN(d.getTime())) return null;
-    const year = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    return `${year}-${m}`;
-  }))].filter(Boolean).sort().reverse();
+  const accountId = AppState.filters?.accountId || "";
+  const transactions = AppState.transactions || [];
 
-  const formatMonthName = (monthKey) => {
-    const [year, month] = monthKey.split("-");
-    const dateObj = new Date(year, parseInt(month) - 1, 1);
-    return dateObj.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const acctTxns = transactions.filter(t => !accountId || t.sourceBank === accountId);
+  if (!acctTxns.length) {
+    monthFilter.innerHTML = `<option value="">All cycles</option>`;
+    monthFilter.value = "";
+    return;
+  }
+
+  const isCC = accountId.includes("CC");
+
+  const parseDateStr = (dateStr) => {
+    if (!dateStr) return new Date(0);
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      let [dd, mm, yyyy] = parts;
+      if (yyyy.length === 2) yyyy = "20" + yyyy;
+      return new Date(`${yyyy}-${mm}-${dd}`);
+    }
+    return new Date(dateStr);
   };
 
+  const formatDateLabel = (dateObj) => {
+    return dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
+  const options = [];
+
+  if (isCC) {
+    // Extract unique statementDate values
+    const stmtDates = [...new Set(acctTxns.map(t => t.statementDate))].filter(Boolean);
+    
+    if (stmtDates.length > 0) {
+      // Sort statement dates chronologically descending
+      stmtDates.sort((a, b) => parseDateStr(b) - parseDateStr(a));
+
+      for (const stmt of stmtDates) {
+        const endDate = parseDateStr(stmt);
+        if (isNaN(endDate.getTime())) continue;
+
+        // Start date is 13th of previous month
+        const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 13);
+        
+        const label = `${formatDateLabel(startDate)} - ${formatDateLabel(endDate)}`;
+        options.push({ value: `stmt:${stmt}`, label });
+      }
+    }
+  }
+
+  // Fallback to calendar months if not CC or if CC has no statement dates
+  if (options.length === 0) {
+    const months = [...new Set(acctTxns.map(t => {
+      if (!t.date) return null;
+      const d = new Date(t.date);
+      if (isNaN(d.getTime())) return null;
+      const year = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      return `${year}-${m}`;
+    }))].filter(Boolean).sort().reverse();
+
+    for (const m of months) {
+      const [year, month] = m.split("-");
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of month
+      
+      const label = `${formatDateLabel(startDate)} - ${formatDateLabel(endDate)}`;
+      options.push({ value: `month:${m}`, label });
+    }
+  }
+
+  // Populate dropdown
   monthFilter.innerHTML = `
-    <option value="">All months</option>
-    ${months.map(m => `<option value="${m}">${formatMonthName(m)}</option>`).join("")}
+    ${options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
   `;
 
-  if (months.includes(currentValue)) {
-    monthFilter.value = currentValue;
+  // Always default to the most recent cycle (the first option) on selection/refresh
+  if (options.length > 0) {
+    const currentValue = AppState.filters?.month || "";
+    const hasCurrent = options.some(opt => opt.value === currentValue);
+    if (hasCurrent) {
+      monthFilter.value = currentValue;
+    } else {
+      monthFilter.value = options[0].value;
+      AppState.filters.month = options[0].value;
+    }
   } else {
     monthFilter.value = "";
+    AppState.filters.month = "";
   }
 }
 
