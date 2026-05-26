@@ -229,6 +229,7 @@ export function renderSummary() {
 
   const txnCount = transactions.length;
   const totalDue = Number(meta.totalDue) || 0;
+  const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
   
   let creditLimit = Number(meta.creditLimit) || 0;
   // Auto-heal missing credit limits to prevent 0% division bugs
@@ -254,8 +255,6 @@ export function renderSummary() {
   const dateEl = document.getElementById("nav-date");
   const dueEl = document.getElementById("nav-due");
   const navCardContainer = document.getElementById("nav-card");
-
-  const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
 
   if (cardNoEl && dateEl && dueEl && navCardContainer) {
     if (isSavingsAccount) {
