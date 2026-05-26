@@ -857,6 +857,28 @@
     <!-- Utilisation -->
     <div class="util-section" id="util-section"></div>
 
+    <!-- Global Filters Strip (Visible on all tabs) -->
+    <div class="filters" style="margin-bottom: 1.5rem;">
+      <input type="text" id="search" placeholder="Search description...">
+      <select id="monthFilter"><option value="">All months</option></select>
+      <select id="catFilter"><option value="">All categories</option></select>
+      <select id="typeFilter">
+        <option value="">All transactions</option>
+        <option value="debit">Debits only</option>
+        <option value="credit">Credits only</option>
+      </select>
+      <select id="sortFilter">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="amount-desc">Amount: High to Low</option>
+        <option value="amount-asc">Amount: Low to High</option>
+        <option value="desc-asc">Description: A to Z</option>
+        <option value="desc-desc">Description: Z to A</option>
+        <option value="cat-asc">Category: A to Z</option>
+        <option value="cat-desc">Category: Z to A</option>
+      </select>
+    </div>
+
     <!-- Premium Tab Navigation Bar -->
     <div class="tabs-container">
       <button class="tab-button active" data-tab="spend" onclick="switchTab('spend')">📊 Spend Analysis</button>
@@ -974,31 +996,11 @@
     <!-- Tab 4: Transactions Table -->
     <div id="tab-transactions" class="tab-content">
       <div class="txn-section">
-        <div class="txn-header">
+        <div class="txn-header" style="margin-bottom: 1.5rem;">
           <div>
             <p class="txn-title">All transactions</p>
             <p class="txn-count" id="txn-count"></p>
           </div>
-        </div>
-        <div class="filters">
-          <input type="text" id="search" placeholder="Search description...">
-          <select id="monthFilter"><option value="">All months</option></select>
-          <select id="catFilter"><option value="">All categories</option></select>
-          <select id="typeFilter">
-            <option value="">All transactions</option>
-            <option value="debit">Debits only</option>
-            <option value="credit">Credits only</option>
-          </select>
-          <select id="sortFilter">
-            <option value="date-desc">Newest first</option>
-            <option value="date-asc">Oldest first</option>
-            <option value="amount-desc">Amount: High to Low</option>
-            <option value="amount-asc">Amount: Low to High</option>
-            <option value="desc-asc">Description: A to Z</option>
-            <option value="desc-desc">Description: Z to A</option>
-            <option value="cat-asc">Category: A to Z</option>
-            <option value="cat-desc">Category: Z to A</option>
-          </select>
         </div>
         <table>
           <thead>
