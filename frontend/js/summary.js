@@ -127,7 +127,7 @@ function renderAccountsStrip() {
 }
 
 // Global account selector trigger
-window.selectAccount = async function(accountId) {
+window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
   AppState.filters = {
     ...AppState.filters,
     accountId
@@ -169,7 +169,7 @@ window.selectAccount = async function(accountId) {
 
   const filters = await import("./filters.js");
   filters.refreshFilters();
-  if (window.syncAndPoll) {
+  if (window.syncAndPoll && !skipSyncAndPoll) {
     window.syncAndPoll();
   }
 };
