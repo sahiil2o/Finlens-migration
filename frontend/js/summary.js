@@ -154,7 +154,15 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
       try {
         const savedMeta = JSON.parse(localStorage.getItem(`meta_${cc}`));
         if (savedMeta) {
-          totalDueSum += Number(savedMeta.totalDue) || 0;
+          let ccDue = Number(savedMeta.totalDue) || 0;
+          if (ccDue === 0) {
+            const ccTxns = (AppState.transactions || []).filter(t => t.sourceBank === cc && t.type === "debit");
+            ccDue = ccTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+            savedMeta.totalDue = ccDue;
+            localStorage.setItem(`meta_${cc}`, JSON.stringify(savedMeta));
+          }
+          totalDueSum += ccDue;
+
           let limit = Number(savedMeta.creditLimit) || 0;
           if (limit === 0) {
             limit = 150000; // Auto-heal missing credit limit
@@ -164,8 +172,11 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
           creditLimitSum = Math.max(creditLimitSum, limit); // Shared limit!
         } else {
           // Fallback metadata block if not present
-          const fallbackCC = { accountId: cc, totalDue: 0, creditLimit: 150000, accountType: "credit" };
+          const ccTxns = (AppState.transactions || []).filter(t => t.sourceBank === cc && t.type === "debit");
+          const ccDue = ccTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          const fallbackCC = { accountId: cc, totalDue: ccDue, creditLimit: 150000, accountType: "credit" };
           localStorage.setItem(`meta_${cc}`, JSON.stringify(fallbackCC));
+          totalDueSum += ccDue;
           creditLimitSum = Math.max(creditLimitSum, 150000);
         }
       } catch {}
@@ -228,8 +239,12 @@ export function renderSummary() {
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const txnCount = transactions.length;
-  const totalDue = Number(meta.totalDue) || 0;
   const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
+
+  let totalDue = Number(meta.totalDue) || 0;
+  if (!isSavingsAccount && totalDue === 0) {
+    totalDue = totalSpend; // Fallback to cycle spending if statement due is 0/missing
+  }
   
   let creditLimit = Number(meta.creditLimit) || 0;
   // Auto-heal missing credit limits to prevent 0% division bugs
