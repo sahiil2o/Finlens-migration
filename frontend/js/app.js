@@ -338,7 +338,8 @@ async function loadTransactionsFromDB() {
     if (transactions && transactions.length > 0) {
       showDashboard();
       if (window.selectAccount) {
-        await window.selectAccount("", true);
+        const activeAccountId = AppState.filters?.accountId || "";
+        await window.selectAccount(activeAccountId, true);
       } else {
         refreshFilters();
       }
