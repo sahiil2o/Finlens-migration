@@ -567,6 +567,126 @@ export function getAccountMetadata() {
 }
 
 // ===============================
+// REPOSITORY HELPERS (STEP 2)
+// ===============================
+
+export function getVendorsByAccount(accountId, limit = null) {
+  return new Promise((resolve, reject) => {
+    let query = `
+      SELECT 
+        normalized_merchant AS normalized_name,
+        MAX(merchant) AS display_name,
+        MAX(category) AS category,
+        COUNT(*) AS transaction_count,
+        SUM(amount) AS total_spend,
+        MIN(date) AS first_seen,
+        MAX(date) AS last_seen
+      FROM transactions
+      WHERE type = 'debit' AND NOT (
+        merchant LIKE '%autopay%' OR 
+        merchant LIKE '%thank you%' OR 
+        merchant LIKE '%credit card%' OR 
+        merchant LIKE '%card payment%' OR 
+        merchant LIKE '%cc payment%' OR 
+        merchant LIKE '%payment received%' OR 
+        merchant LIKE '%cashback%' OR 
+        merchant LIKE '%reversal%' OR 
+        merchant LIKE '%refund%'
+      )
+    `;
+    
+    const params = [];
+    if (accountId && accountId !== "all") {
+      query += ` AND source_bank = ?`;
+      params.push(accountId);
+    }
+    
+    query += ` GROUP BY normalized_merchant ORDER BY total_spend DESC`;
+    
+    if (limit) {
+      query += ` LIMIT ?`;
+      params.push(limit);
+    }
+
+    db.all(query, params, (error, rows) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
+export function getVendorByNormalizedName(normalizedName) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `
+      SELECT *
+      FROM vendors
+      WHERE normalized_name = ?
+      `,
+      [normalizedName],
+      (error, row) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(row);
+        }
+      }
+    );
+  });
+}
+
+export function updateVendorCategory(normalizedName, category) {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run(
+        `UPDATE vendors SET category = ? WHERE normalized_name = ?`,
+        [category, normalizedName],
+        (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          db.run(
+            `UPDATE transactions SET category = ?, ai_categorized = 1 WHERE normalized_merchant = ?`,
+            [category, normalizedName],
+            (err2) => {
+              if (err2) {
+                reject(err2);
+              } else {
+                resolve();
+              }
+            }
+          );
+        }
+      );
+    });
+  });
+}
+
+export function clearTransactionsAndVendors() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run("DELETE FROM vendors", (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        db.run("DELETE FROM transactions", (err2) => {
+          if (err2) {
+            reject(err2);
+          } else {
+            resolve();
+          }
+        });
+      });
+    });
+  });
+}
+
+// ===============================
 // EXPORT DB
 // ===============================
 

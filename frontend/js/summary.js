@@ -1,4 +1,5 @@
 import { AppState } from "./state.js";
+import { calculateSpendTotals, calculateSalaryCycles } from "./calculator.js";
 
 // ===============================
 // DOM ELEMENTS
@@ -237,76 +238,27 @@ export function renderSummary() {
   // Render accounts selector strip first
   renderAccountsStrip();
 
-  const transactions = AppState.filteredTransactions;
   const meta = AppState.meta || {};
+  const {
+    isSavingsAccount,
+    totalSpend,
+    totalCredits,
+    txnCount,
+    totalDue,
+    creditLimit,
+    healedLimit,
+    utilization,
+    hasOdLimit,
+    usedOd,
+    odLimit,
+    odUtil,
+    availableBalance
+  } = calculateSpendTotals(AppState.filteredTransactions || [], AppState.transactions || [], meta);
 
-  const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
-
-  // ===========================
-  // SPENDING TRANSACTIONS
-  // ===========================
-
-  const spendTransactions = transactions.filter(transaction => {
-    if (transaction.type !== "debit") return false;
-
-    const description = transaction.description?.toLowerCase() || "";
-
-    // Exclude payment loops/transfers ONLY if NOT savings account
-    if (!isSavingsAccount) {
-      if (
-        description.includes("credit card") ||
-        description.includes("card payment") ||
-        description.includes("cc payment") ||
-        description.includes("autopay")
-      ) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  // ===========================
-  // CALCULATIONS
-  // ===========================
-
-  let totalSpend = spendTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-  
-  // If it's a savings account, subtract roommate split contributions from the total spent sum!
-  let reimbursementCreditsSum = 0;
-  if (isSavingsAccount) {
-    const reimbursementCredits = transactions.filter(t => t.type === "credit" && t.category === "reimbursement");
-    reimbursementCreditsSum = reimbursementCredits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    totalSpend = Math.max(0, totalSpend - reimbursementCreditsSum);
+  if (healedLimit && meta.accountId) {
+    meta.creditLimit = creditLimit;
+    localStorage.setItem(`meta_${meta.accountId}`, JSON.stringify(meta));
   }
-
-  const totalCredits = transactions
-    .filter(t => t.type === "credit")
-    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-  const txnCount = transactions.length;
-
-  let totalDue = Number(meta.totalDue) || 0;
-  if (!isSavingsAccount && totalDue === 0) {
-    totalDue = totalSpend; // Fallback to cycle spending if statement due is 0/missing
-  }
-  
-  let creditLimit = Number(meta.creditLimit) || 0;
-  // Auto-heal missing credit limits to prevent 0% division bugs
-  if (!isSavingsAccount) {
-    if (meta.accountId === "all") {
-      const uniqueCcs = [...new Set((AppState.transactions || []).map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
-      if (creditLimit === 0 && uniqueCcs.length > 0) {
-        creditLimit = 150000; // Shared fallback limit
-      }
-    } else if (creditLimit === 0 && meta.accountId) {
-      creditLimit = 150000; // Fallback card limit
-      meta.creditLimit = creditLimit;
-      localStorage.setItem(`meta_${meta.accountId}`, JSON.stringify(meta));
-    }
-  }
-
-  const utilization = creditLimit ? ((totalDue / creditLimit) * 100).toFixed(1) : "0.0";
 
   // ===========================
   // UPDATE DYNAMIC NAVBAR METADATA
@@ -336,12 +288,9 @@ export function renderSummary() {
   // SUMMARY STRIP
   // ===========================
 
-  const hasOdLimit = Number(meta.odLimit) > 0;
-
   if (isSavingsAccount) {
     if (hasOdLimit) {
       const netColor = totalDue < 0 ? "#ff5a5a" : "#3de89b";
-      const availableBalance = Number(meta.odLimit) + totalDue;
       summaryStrip.innerHTML = `
         ${buildCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
         ${buildCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
@@ -371,9 +320,6 @@ export function renderSummary() {
 
   if (isSavingsAccount) {
     if (hasOdLimit) {
-      const usedOd = totalDue < 0 ? Math.abs(totalDue) : 0;
-      const odLimit = Number(meta.odLimit) || 0;
-      const odUtil = odLimit ? ((usedOd / odLimit) * 100).toFixed(1) : "0.0";
       
       utilSection.style.display = "flex";
       utilSection.innerHTML = `
@@ -436,74 +382,9 @@ export function renderSummary() {
   const salaryCycleSection = document.getElementById("salary-cycle-section");
   if (salaryCycleSection) {
     if (isSavingsAccount && meta.accountId) {
-      // 1. Get all transactions for this savings account
-      const acctTxns = (AppState.transactions || []).filter(t => t.sourceBank === meta.accountId);
+      const cycles = calculateSalaryCycles(AppState.transactions || [], meta.accountId);
       
-      // 2. Find all salary credits
-      const salaryCredits = acctTxns.filter(t => t.type === "credit" && t.category === "salary");
-      
-      // Sort chronologically ascending
-      salaryCredits.sort((a, b) => new Date(a.date) - new Date(b.date));
-      
-      if (salaryCredits.length >= 1) {
-        const cycles = [];
-        
-        for (let i = 0; i < salaryCredits.length; i++) {
-          const currentSalary = salaryCredits[i];
-          const startDate = new Date(currentSalary.date);
-          
-          let endDate = null;
-          let isCurrentCycle = false;
-          
-          if (i + 1 < salaryCredits.length) {
-            endDate = new Date(salaryCredits[i + 1].date);
-          } else {
-            isCurrentCycle = true;
-            const txnDates = acctTxns.map(t => new Date(t.date)).filter(d => !isNaN(d.getTime()));
-            endDate = txnDates.length ? new Date(Math.max(...txnDates)) : new Date();
-            endDate.setDate(endDate.getDate() + 1);
-          }
-          
-          const cycleSpendTxns = acctTxns.filter(t => {
-            if (t.type !== "debit") return false;
-            const tDate = new Date(t.date);
-            if (isNaN(tDate.getTime())) return false;
-            
-            if (tDate < startDate || tDate >= endDate) return false;
-            
-            // We now KEEP credit card autopays as real spends!
-            return true;
-          });
-          
-          const cycleSpend = cycleSpendTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-          
-          // Get all roommate split/reimbursement credits during this cycle
-          const cycleReimbursementsTxns = acctTxns.filter(t => {
-            if (t.type !== "credit" || t.category !== "reimbursement") return false;
-            const tDate = new Date(t.date);
-            if (isNaN(tDate.getTime())) return false;
-            return tDate >= startDate && tDate < endDate;
-          });
-          
-          const cycleReimbursements = cycleReimbursementsTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-          const netSpend = Math.max(0, cycleSpend - cycleReimbursements);
-
-          const endDisplay = i + 1 < salaryCredits.length 
-            ? new Date(salaryCredits[i + 1].date) 
-            : new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
-            
-          cycles.push({
-            salaryAmount: Number(currentSalary.amount),
-            salaryDate: startDate,
-            endDate: endDisplay,
-            spend: cycleSpend,
-            reimbursements: cycleReimbursements,
-            netSpend: netSpend,
-            isCurrent: isCurrentCycle
-          });
-        }
-        
-        cycles.reverse();
+      if (cycles.length >= 1) {
         
         const formatDateLabel = (d) => {
           return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
