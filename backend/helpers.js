@@ -72,6 +72,7 @@ export function detectRecurringSubscriptions(transactions) {
   }
 
   const subscriptions = [];
+  const utilityKeywords = ["utility", "telecom", "bill", "electricity", "broadband", "mobile", "power", "recharge", "gas", "water", "insurance"];
 
   for (const [merchant, vendorTransactions] of Object.entries(grouped)) {
     if (vendorTransactions.length < 2) continue;
@@ -79,35 +80,93 @@ export function detectRecurringSubscriptions(transactions) {
     // Sort by date ascending
     vendorTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Calculate Average Amount
-    const avgAmount = vendorTransactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0) / vendorTransactions.length;
-
-    // Check Amount Consistency
-    const similarAmounts = vendorTransactions.every(transaction => {
-      const diff = Math.abs(Number(transaction.amount) - avgAmount);
-      return diff < (avgAmount * 0.25);
-    });
-
-    if (!similarAmounts) continue;
-
-    // Calculate Gaps (in days)
-    const gaps = [];
+    // 1. Calculate Gaps & Filter Anomalies (Ignore failed transaction retry loops < 3 days)
+    const rawGaps = [];
     for (let i = 1; i < vendorTransactions.length; i++) {
       const prev = new Date(vendorTransactions[i - 1].date);
       const curr = new Date(vendorTransactions[i].date);
       const days = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
-      gaps.push(days);
+      rawGaps.push(days);
     }
 
-    // Check Monthly-like Pattern (20 to 40 days gap)
-    const recurring = gaps.every(gap => gap >= 20 && gap <= 40);
-    if (!recurring) continue;
+    // Filter retry anomalies
+    const filteredGaps = rawGaps.filter(gap => gap >= 3);
+    if (filteredGaps.length < 1) continue;
 
-    // Confidence Scoring
-    let confidence = 60;
-    if (vendorTransactions.length >= 3) confidence += 15;
-    if (vendorTransactions.length >= 5) confidence += 15;
-    confidence = Math.min(confidence, 95);
+    // 2. Median Interval Check
+    const sortedGaps = [...filteredGaps].sort((a, b) => a - b);
+    const mid = Math.floor(sortedGaps.length / 2);
+    const medianGap = sortedGaps.length % 2 !== 0 ? sortedGaps[mid] : Math.round((sortedGaps[mid - 1] + sortedGaps[mid]) / 2);
+
+    // 3. Frequency Validation
+    let frequency = "unknown";
+    let minGap = 0;
+    let maxGap = 0;
+
+    if (medianGap >= 5 && medianGap <= 10) {
+      frequency = "weekly";
+      minGap = 5;
+      maxGap = 10;
+    } else if (medianGap >= 11 && medianGap <= 18) {
+      frequency = "bi-weekly";
+      minGap = 11;
+      maxGap = 18;
+    } else if (medianGap >= 22 && medianGap <= 38) {
+      frequency = "monthly";
+      minGap = 22;
+      maxGap = 38;
+    } else if (medianGap >= 75 && medianGap <= 105) {
+      frequency = "quarterly";
+      minGap = 75;
+      maxGap = 105;
+    }
+
+    if (frequency === "unknown") continue;
+
+    // Require majority (>= 70%) of filtered gaps to align with detected interval range
+    const matchingGaps = filteredGaps.filter(gap => gap >= minGap && gap <= maxGap);
+    const gapMatchRatio = matchingGaps.length / filteredGaps.length;
+    if (gapMatchRatio < 0.7) continue;
+
+    // 4. Calculate Average Amount
+    const avgAmount = vendorTransactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0) / vendorTransactions.length;
+
+    // 5. Utility vs SaaS Amount Variance Check
+    const merchantLower = (vendorTransactions[0].merchant || "").toLowerCase();
+    const isUtility = utilityKeywords.some(keyword => merchantLower.includes(keyword)) || 
+                      (vendorTransactions[0].category === "bills" || vendorTransactions[0].category === "rent");
+
+    const varianceLimit = isUtility ? 0.45 : 0.15; // 45% variance limit for utilities, 15% for flat-rate SaaS
+
+    const similarAmounts = vendorTransactions.every(transaction => {
+      const diff = Math.abs(Number(transaction.amount) - avgAmount);
+      return diff <= (avgAmount * varianceLimit);
+    });
+
+    if (!similarAmounts) continue;
+
+    // 6. Detailed Confidence Scoring
+    let confidence = 50;
+
+    // Length weights
+    if (vendorTransactions.length === 3) confidence += 15;
+    else if (vendorTransactions.length === 4) confidence += 20;
+    else if (vendorTransactions.length >= 5) confidence += 30;
+
+    // Gap consistency weight
+    const gapDeviations = filteredGaps.map(gap => Math.abs(gap - medianGap));
+    const avgGapDeviation = gapDeviations.reduce((a, b) => a + b, 0) / gapDeviations.length;
+    if (avgGapDeviation <= 1.5) confidence += 10;
+    else if (avgGapDeviation <= 3) confidence += 5;
+
+    // SaaS amount stability bonus
+    if (!isUtility) {
+      const amountDeviations = vendorTransactions.map(t => Math.abs(Number(t.amount) - avgAmount));
+      const avgAmtDeviation = amountDeviations.reduce((a, b) => a + b, 0) / amountDeviations.length;
+      if (avgAmtDeviation <= avgAmount * 0.05) confidence += 10;
+    }
+
+    confidence = Math.min(Math.max(confidence, 40), 99);
 
     subscriptions.push({
       merchant,
@@ -116,8 +175,9 @@ export function detectRecurringSubscriptions(transactions) {
       recurringCount: vendorTransactions.length,
       averageAmount: avgAmount,
       lastCharge: vendorTransactions.at(-1).date,
-      averageGapDays: Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length),
-      confidence
+      averageGapDays: Math.round(filteredGaps.reduce((a, b) => a + b, 0) / filteredGaps.length),
+      confidence,
+      frequency
     });
   }
 
