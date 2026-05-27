@@ -1,4 +1,5 @@
 import { AppState } from "./state.js";
+import { applyFiltersEngine } from "./utils/filterEngine.js";
 
 // ===============================
 // DOM ELEMENTS
@@ -61,28 +62,14 @@ function setupEventListeners() {
 // ===============================
 
 export function applyFilters() {
+  const search = searchInput.value.toLowerCase().trim();
+  const category = categoryFilter.value;
+  const type = typeFilter.value;
+  const month = monthFilter.value;
+  const sortBy = sortFilter.value;
+  const accountId = AppState.filters?.accountId || "";
 
-  const search =
-    searchInput.value
-      .toLowerCase()
-      .trim();
-
-  const category =
-    categoryFilter.value;
-
-  const type =
-    typeFilter.value;
-
-  const month =
-    monthFilter.value;
-
-  const sortBy =
-    sortFilter.value;
-
-  // ===============================
-  // SAVE FILTER STATE
-  // ===============================
-
+  // Save criteria to state
   AppState.filters = {
     ...AppState.filters,
     search,
@@ -92,130 +79,18 @@ export function applyFilters() {
     sortBy
   };
 
-  // ===============================
-  // START WITH ALL TRANSACTIONS
-  // ===============================
+  // Run pure filter engine
+  const filtered = applyFiltersEngine(AppState.transactions || [], {
+    search,
+    category,
+    type,
+    month,
+    accountId,
+    sortBy
+  });
 
-  let filtered =
-    [...AppState.transactions];
+  AppState.filteredTransactions = filtered;
 
-  // ===============================
-  // MONTH / DATE SLICER FILTER
-  // ===============================
-  if (month) {
-    if (month.startsWith("stmt:")) {
-      const targetStmt = month.replace("stmt:", "");
-      filtered = filtered.filter(t => t.statementDate === targetStmt);
-    } else if (month.startsWith("month:")) {
-      const targetMonth = month.replace("month:", "");
-      filtered = filtered.filter(t => {
-        if (!t.date) return false;
-        const d = new Date(t.date);
-        if (isNaN(d.getTime())) return false;
-        const year = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        return `${year}-${m}` === targetMonth;
-      });
-    }
-  }
-
-  // ===============================
-  // ACCOUNT / CARD FILTER
-  // ===============================
-
-  const accountId = AppState.filters?.accountId || "";
-  if (accountId) {
-    filtered = filtered.filter(t => t.sourceBank === accountId);
-  }
-
-  // ===============================
-  // SEARCH FILTER
-  // ===============================
-
-  if (search) {
-
-    filtered = filtered.filter(
-      transaction => {
-
-        const description =
-          transaction.description || "";
-
-        return description
-          .toLowerCase()
-          .includes(search);
-      }
-    );
-  }
-
-  // ===============================
-  // CATEGORY FILTER
-  // ===============================
-
-  if (category) {
-
-    filtered = filtered.filter(
-      transaction =>
-
-        transaction.category
-        === category
-    );
-  }
-
-  // ===============================
-  // TYPE FILTER
-  // ===============================
-
-  if (type) {
-
-    filtered = filtered.filter(
-      transaction =>
-
-        transaction.type
-        === type
-    );
-  }
-
-  // ===============================
-  // SORT TRANSACTIONS
-  // ===============================
-  if (sortBy === "date-asc") {
-    filtered.sort((a, b) => {
-      const da = a.date ? new Date(a.date) : new Date(0);
-      const db = b.date ? new Date(b.date) : new Date(0);
-      return da - db;
-    });
-  } else if (sortBy === "date-desc") {
-    filtered.sort((a, b) => {
-      const da = a.date ? new Date(a.date) : new Date(0);
-      const db = b.date ? new Date(b.date) : new Date(0);
-      return db - da;
-    });
-  } else if (sortBy === "amount-desc") {
-    filtered.sort((a, b) => Number(b.amount) - Number(a.amount));
-  } else if (sortBy === "amount-asc") {
-    filtered.sort((a, b) => Number(a.amount) - Number(b.amount));
-  } else if (sortBy === "desc-asc") {
-    filtered.sort((a, b) => (a.description || "").localeCompare(b.description || ""));
-  } else if (sortBy === "desc-desc") {
-    filtered.sort((a, b) => (b.description || "").localeCompare(a.description || ""));
-  } else if (sortBy === "cat-asc") {
-    filtered.sort((a, b) => (a.category || "other").localeCompare(b.category || "other"));
-  } else if (sortBy === "cat-desc") {
-    filtered.sort((a, b) => (b.category || "other").localeCompare(a.category || "other"));
-  }
-
-  // ===============================
-  // UPDATE FILTERED STATE
-  // ===============================
-
-  AppState.filteredTransactions =
-    filtered;
-
-
-
-  // ===============================
-  // UPDATE HEADER ARROWS
-  // ===============================
   updateHeaderSortIndicators(sortBy);
 }
 
