@@ -39,7 +39,8 @@
   * **Stage 2:** Decoupled SQLite raw queries out of routing controllers in `server.js` into promise-based repository functions in `database.js`.
   * **Stage 3:** Split monolithic routing in `server.js` into modular Express routing files under `/routes/` (for transactions, vendors, and analytics), and moved shared utilities to `helpers.js`.
   * **Stage 4:** Introduced a reactive Pub/Sub state store using a JavaScript Proxy in `state.js`, completely decoupling `filters.js` from visual rendering modules (`table.js`, `summary.js`, `charts.js`, `trends.js`).
-  * **Result:** `server.js` is a database-agnostic ~40-line mounting wrapper, and the frontend components communicate reactively via state-driven events. The entire workspace is fully functional and stable.
+  * **Stage 5:** Extracted monolithic inline HTML string interpolation blocks from `summary.js` into modular functional template component modules inside `components/` (e.g. `StatCard.js`, `AccountCard.js`, `SalaryCycleCard.js`).
+  * **Result:** `server.js` is a database-agnostic ~40-line mounting wrapper, the frontend components communicate reactively via state-driven events, and visual presentation layers are highly isolated and reusable. The entire workspace is fully functional and stable.
 
 ---
 
