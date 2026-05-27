@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import { initializeDatabase } from "./database.js";
+import { PORT } from "./config.js";
 
 import transactionsRouter from "./routes/transactions.js";
 import vendorsRouter from "./routes/vendors.js";
@@ -38,7 +39,6 @@ app.use(analyticsRouter);
 // ===============================
 // START SERVER
 // ===============================
-const PORT = 3000;
 
 app.listen(PORT, () => {
   console.log(`FinLens AI server running on http://localhost:${PORT}`);

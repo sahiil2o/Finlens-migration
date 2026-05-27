@@ -1,34 +1,19 @@
 import sqlite3 from "sqlite3";
 import fs from "fs";
 import crypto from "crypto";
-
 import path from "path";
 import { fileURLToPath } from "url";
 
-// ===============================
-// ABSOLUTE DB PATH
-// ===============================
+import { DB_PATH } from "./config.js";
 
-const __filename =
-  fileURLToPath(import.meta.url);
-
-const __dirname =
-  path.dirname(__filename);
-
-const dbPath =
-  path.join(
-    __dirname,
-    "finlens.db"
-  );
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ===============================
 // DATABASE
 // ===============================
 
-const db =
-  new sqlite3.Database(
-    dbPath
-  );
+const db = new sqlite3.Database(DB_PATH);
 
 // ===============================
 // INIT DATABASE
