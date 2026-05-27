@@ -1,0 +1,29 @@
+<div class="charts-grid fade-in" style="margin-top:0; margin-bottom:2rem;">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div>
+        <p class="chart-title">Historical cashflow trends</p>
+        <p class="chart-sub">Credits vs Spend over time</p>
+      </div>
+    </div>
+    <div style="position:relative; height:240px">
+      <canvas id="trendChart" role="img" aria-label="Line chart showing credits and debits cashflow trends"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div>
+        <p class="chart-title">🔮 Spend forecast & alerts</p>
+        <p class="chart-sub">Predictive weighted moving average</p>
+      </div>
+      <div>
+        <p class="chart-total" id="forecast-value">—</p>
+        <p class="chart-total-sub">projected spend</p>
+      </div>
+    </div>
+    <div id="forecast-insights" style="display:flex; flex-direction:column; gap:10px; margin-top:15px; overflow-y:auto; max-height:220px;">
+      <div class="empty-state">No trend insights available. Upload statements across multiple cycles.</div>
+    </div>
+  </div>
+</div>

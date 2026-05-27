@@ -4,22 +4,18 @@ import { AppState } from "./state.js";
 // DOM ELEMENTS
 // ===============================
 
-const searchInput =
-  document.getElementById("search");
-
-const monthFilter =
-  document.getElementById("monthFilter");
-
-const categoryFilter =
-  document.getElementById("catFilter");
-
-const typeFilter =
-  document.getElementById("typeFilter");
-
-const sortFilter =
-  document.getElementById("sortFilter");
+let searchInput;
+let monthFilter;
+let categoryFilter;
+let typeFilter;
+let sortFilter;
 
 export function initializeFilters() {
+  searchInput = document.getElementById("search");
+  monthFilter = document.getElementById("monthFilter");
+  categoryFilter = document.getElementById("catFilter");
+  typeFilter = document.getElementById("typeFilter");
+  sortFilter = document.getElementById("sortFilter");
 
   setupEventListeners();
 

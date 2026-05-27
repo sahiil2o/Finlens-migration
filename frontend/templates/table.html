@@ -1,0 +1,20 @@
+<div class="txn-section">
+  <div class="txn-header" style="margin-bottom: 1.5rem;">
+    <div>
+      <p class="txn-title">All transactions</p>
+      <p class="txn-count" id="txn-count"></p>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th id="th-description" style="width:200px; cursor:pointer; user-select:none" onclick="sortByHeader('description')">Description</th>
+        <th id="th-category" style="width:95px; cursor:pointer; user-select:none" onclick="sortByHeader('category')">Category</th>
+        <th id="th-amount" style="width:70px; text-align:right; cursor:pointer; user-select:none" onclick="sortByHeader('amount')">Amount</th>
+        <th style="width:60px; text-align:center; user-select:none">Type</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <p class="no-results" id="no-results" style="display:none">No transactions match your filters.</p>
+</div>

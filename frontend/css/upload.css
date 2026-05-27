@@ -1,0 +1,110 @@
+/* ==========================================
+   UPLOAD SCREEN & STATEMENT DROP ZONE
+   ========================================== */
+
+#upload-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+#upload-screen::before {
+  content: '';
+  position: fixed;
+  top: -40%;
+  left: -20%;
+  width: 80vw;
+  height: 80vw;
+  background: radial-gradient(circle, rgba(94,107,255,0.06) 0%, rgba(0,0,0,0) 70%);
+  z-index: 1;
+}
+
+#upload-screen::after {
+  content: '';
+  position: fixed;
+  bottom: -40%;
+  right: -20%;
+  width: 80vw;
+  height: 80vw;
+  background: radial-gradient(circle, rgba(232,245,78,0.04) 0%, rgba(0,0,0,0) 70%);
+  z-index: 1;
+}
+
+.upload-logo {
+  font-family: var(--font-head);
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.5rem;
+  z-index: 2;
+}
+
+.upload-logo span {
+  color: var(--accent);
+}
+
+.upload-tagline {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 2.5rem;
+  z-index: 2;
+}
+
+.drop-zone {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1.5px dashed var(--border2);
+  border-radius: 20px;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+  position: relative;
+}
+
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent2);
+  background: rgba(94, 107, 255, 0.02);
+  box-shadow: 0 12px 30px rgba(13, 15, 20, 0.4);
+  transform: translateY(-2px);
+}
+
+.drop-zone.drag-over {
+  border-style: solid;
+}
+
+.drop-zone input[type="file"] {
+  display: none;
+}
+
+.drop-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1.2rem;
+  transition: transform 0.2s ease;
+}
+
+.drop-zone:hover .drop-icon {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.drop-title {
+  font-family: var(--font-head);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.drop-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+}

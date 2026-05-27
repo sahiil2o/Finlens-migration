@@ -1,0 +1,329 @@
+/* ==========================================
+   GLOBAL DESIGN VARIABLES & RESETS
+   ========================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:        #0d0f14;
+  --surface:   #13161e;
+  --surface2:  #1a1e29;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.13);
+  --text:      #e8eaf0;
+  --muted:     #7b8196;
+  --faint:     #3d4256;
+  --accent:    #e8f54e;
+  --accent2:   #5e6bff;
+  --red:       #ff5a5a;
+  --green:     #3de89b;
+  --amber:     #f5a623;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  padding-bottom: 2rem;
+}
+
+/* ── PREMIUM TAB NAVIGATION ── */
+.tabs-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 2rem;
+  border-bottom: 1.5px solid var(--border);
+  padding-bottom: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 10;
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-head);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-button.active {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(232, 245, 78, 0.25);
+}
+
+.tab-content {
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.tab-content.active {
+  height: auto;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── TOASTS & UTILITIES ── */
+.error-msg {
+  color: var(--red);
+  font-size: 0.78rem;
+  margin-top: 0.8rem;
+  text-align: center;
+  min-height: 1.2rem;
+}
+
+#global-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(8,10,15,0.72);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-box {
+  background: #121722;
+  border: 1px solid #232938;
+  border-radius: 18px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 220px;
+}
+
+.loader-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid rgba(255,255,255,0.08);
+  border-top-color: #5e6bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+#loader-message {
+  color: #d9e1f2;
+  font-size: 0.95rem;
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  z-index: 10000;
+  border: 1px solid transparent;
+}
+
+.toast.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast-success {
+  background: #12261c;
+  border-color: #1d5f3f;
+  color: #7ff0b2;
+}
+
+.toast-error {
+  background: #2a1515;
+  border-color: #7f2d2d;
+  color: #ff9c9c;
+}
+
+.empty-state {
+  padding: 32px;
+  text-align: center;
+  color: #7b8196;
+}
+
+/* ── ANIMATIONS ── */
+.fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── TOP NAVIGATION ── */
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,15,20,0.92);
+  backdrop-filter: blur(12px);
+}
+
+.nav-logo {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.nav-logo span {
+  color: var(--accent);
+}
+
+.nav-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+.nav-meta strong {
+  color: var(--text);
+  font-weight: 400;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  transition: all 0.15s;
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── MAIN CONTAINER ── */
+.main {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── GLOBAL FILTERS ── */
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.filters input, .filters select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 7px 12px;
+  border-radius: 8px;
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+  transition: border-color 0.15s;
+}
+
+.filters input:focus, .filters select:focus {
+  border-color: var(--accent2);
+}
+
+.filters select option {
+  background: var(--surface2);
+}
+
+/* ── TRANSACTION LOADING OVERLAY ── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(13,15,20,0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loading-msg {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.loading-sub {
+  font-size: 0.7rem;
+  color: var(--faint);
+}
+

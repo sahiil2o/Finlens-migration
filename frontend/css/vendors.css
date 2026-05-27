@@ -1,0 +1,148 @@
+/* ==========================================================================
+   VENDOR ANALYTICS & SUBSCRIPTION INTELLIGENCE
+   ========================================================================== */
+
+/* ── VENDOR ROW LAYOUT ── */
+.vendor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.vendor-row:hover {
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+
+.vendor-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.vendor-name {
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vendor-meta {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.vendor-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.vendor-amount {
+  font-family: var(--font-head);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.vendor-category {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── SUBSCRIPTION ROW LAYOUT ── */
+.subscription-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.subscription-row:hover {
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+
+.subscription-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.subscription-name {
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subscription-meta {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.subscription-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.subscription-amount {
+  font-family: var(--font-head);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.subscription-confidence {
+  font-size: 0.68rem;
+  margin-top: 2px;
+}
+
+.subscription-confidence.high {
+  color: var(--green);
+}
+
+.subscription-confidence.medium {
+  color: var(--amber);
+}
+
+/* ── INTERACTIVE CATEGORY BADGE CHIPS (SELECT) ── */
+select.category-select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  padding: 3px 20px 3px 8px; /* Room for custom arrow */
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none; /* Hide default arrow */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  transition: background 0.15s;
+  max-width: 140px;
+}
+
+select.category-select:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+select.category-select option {
+  background: #13161e; /* Match var(--surface) */
+  color: var(--text);
+  font-size: 0.8rem;
+}

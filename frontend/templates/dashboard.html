@@ -1,0 +1,67 @@
+<nav class="topnav">
+  <span class="nav-logo">Fin<span>Lens</span></span>
+  <div class="nav-meta">
+    <div id="nav-card">Card ending <strong id="nav-cardno">—</strong></div>
+    <div id="nav-stmt">Statement: <strong id="nav-date">—</strong> &nbsp;·&nbsp; Due: <strong id="nav-due">—</strong></div>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-ghost" onclick="showCachePanel()" id="cache-btn">📦 Vendor cache</button>
+    <button class="btn-ghost" onclick="resetApp()">↑ Upload new</button>
+  </div>
+</nav>
+
+<div class="main">
+  <!-- 💳 CARDS & ACCOUNTS SELECTOR STRIP -->
+  <div id="accounts-strip" style="display:flex; gap:16px; margin-bottom:2rem; overflow-x:auto; padding-bottom:10px; scrollbar-width: none;"></div>
+
+  <!-- Summary strip -->
+  <div class="summary-strip" id="summary-strip"></div>
+
+  <!-- Utilisation -->
+  <div class="util-section" id="util-section"></div>
+
+  <!-- Salary Cycle Spend Analytics -->
+  <div class="util-section" id="salary-cycle-section" style="display:none; flex-direction:column; gap:14px; align-items:stretch;"></div>
+
+  <!-- Global Filters Strip (Visible on all tabs) -->
+  <div class="filters" style="margin-bottom: 1.5rem;">
+    <input type="text" id="search" placeholder="Search description...">
+    <select id="monthFilter"><option value="">All months</option></select>
+    <select id="catFilter"><option value="">All categories</option></select>
+    <select id="typeFilter">
+      <option value="">All transactions</option>
+      <option value="debit">Debits only</option>
+      <option value="credit">Credits only</option>
+    </select>
+    <select id="sortFilter">
+      <option value="date-desc">Newest first</option>
+      <option value="date-asc">Oldest first</option>
+      <option value="amount-desc">Amount: High to Low</option>
+      <option value="amount-asc">Amount: Low to High</option>
+      <option value="desc-asc">Description: A to Z</option>
+      <option value="desc-desc">Description: Z to A</option>
+      <option value="cat-asc">Category: A to Z</option>
+      <option value="cat-desc">Category: Z to A</option>
+    </select>
+  </div>
+
+  <!-- Premium Tab Navigation Bar -->
+  <div class="tabs-container">
+    <button class="tab-button active" data-tab="spend" onclick="switchTab('spend')">📊 Spend Analysis</button>
+    <button class="tab-button" data-tab="cashflow" onclick="switchTab('cashflow')">📈 Cashflow & Alerts</button>
+    <button class="tab-button" data-tab="merchants" onclick="switchTab('merchants')">🏆 Top Merchants</button>
+    <button class="tab-button" data-tab="transactions" onclick="switchTab('transactions')">🧾 Transactions</button>
+  </div>
+
+  <!-- Tab 1: Spend Analysis (Donut Chart & Daily Spend Timeline) -->
+  <div id="tab-spend" class="tab-content active"></div>
+
+  <!-- Tab 2: Cashflow & Alerts (Trends credit/debit & spend forecasts insights) -->
+  <div id="tab-cashflow" class="tab-content"></div>
+
+  <!-- Tab 3: Top Merchants & Subscriptions -->
+  <div id="tab-merchants" class="tab-content"></div>
+
+  <!-- Tab 4: Transactions Table -->
+  <div id="tab-transactions" class="tab-content"></div>
+</div>

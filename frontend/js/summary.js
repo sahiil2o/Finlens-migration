@@ -8,8 +8,8 @@ import { renderSalaryCycleCard } from "./components/SalaryCycleCard.js";
 // DOM ELEMENTS
 // ===============================
 
-const summaryStrip = document.getElementById("summary-strip");
-const utilSection = document.getElementById("util-section");
+let summaryStrip;
+let utilSection;
 
 // ===============================
 // ACCOUNTS CAROUSEL SELECTOR
@@ -216,6 +216,9 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
 // ===============================
 
 export function renderSummary() {
+  if (!summaryStrip) summaryStrip = document.getElementById("summary-strip");
+  if (!utilSection) utilSection = document.getElementById("util-section");
+
   // Render accounts selector strip first
   renderAccountsStrip();
 

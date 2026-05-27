@@ -37,53 +37,57 @@ import {
 // DOM ELEMENTS
 // ===============================
 
-const elements = {
+const elements = {};
 
-  fileInput:
-    document.getElementById(
-      "fileInput"
-    ),
+function initElements() {
+  elements.fileInput = document.getElementById("fileInput");
+  elements.dropZone = document.getElementById("dropZone");
+  elements.uploadScreen = document.getElementById("upload-screen");
+  elements.dashboard = document.getElementById("dashboard");
+  elements.errorMsg = document.getElementById("error-msg");
+  elements.vendorList = document.getElementById("vendor-list");
+  elements.vendorTotal = document.getElementById("vendor-total");
+  elements.subscriptionList = document.getElementById("subscription-list");
+  elements.subscriptionTotal = document.getElementById("subscription-total");
+}
 
-  dropZone:
-    document.getElementById(
-      "dropZone"
-    ),
+// ===============================
+// DYNAMIC FETCH TEMPLATE LOADER
+// ===============================
 
-  uploadScreen:
-    document.getElementById(
-      "upload-screen"
-    ),
+async function loadTemplates() {
+  const mainTemplates = [
+    { slotId: "upload-screen", path: "templates/upload.html" },
+    { slotId: "dashboard", path: "templates/dashboard.html" }
+  ];
 
-  dashboard:
-    document.getElementById(
-      "dashboard"
-    ),
+  // Load primary screen shell layout in parallel
+  await Promise.all(
+    mainTemplates.map(async ({ slotId, path }) => {
+      const resp = await fetch(path);
+      if (!resp.ok) throw new Error(`Failed to load template: ${path}`);
+      const text = await resp.text();
+      document.getElementById(slotId).innerHTML = text;
+    })
+  );
 
-  errorMsg:
-    document.getElementById(
-      "error-msg"
-    ),
+  const subTemplates = [
+    { slotId: "tab-spend", path: "templates/spend.html" },
+    { slotId: "tab-cashflow", path: "templates/cashflow.html" },
+    { slotId: "tab-merchants", path: "templates/vendors.html" },
+    { slotId: "tab-transactions", path: "templates/table.html" }
+  ];
 
-  vendorList:
-    document.getElementById(
-      "vendor-list"
-    ),
-
-  vendorTotal:
-    document.getElementById(
-      "vendor-total"
-    ),
-
-  subscriptionList:
-    document.getElementById(
-      "subscription-list"
-    ),
-
-  subscriptionTotal:
-    document.getElementById(
-      "subscription-total"
-    )
-};
+  // Load tab layouts into their respective sub-slots
+  await Promise.all(
+    subTemplates.map(async ({ slotId, path }) => {
+      const resp = await fetch(path);
+      if (!resp.ok) throw new Error(`Failed to load tab template: ${path}`);
+      const text = await resp.text();
+      document.getElementById(slotId).innerHTML = text;
+    })
+  );
+}
 
 // ===============================
 // GLOBALS
@@ -98,26 +102,37 @@ let pollingInterval = null;
 initializeApp();
 
 async function initializeApp() {
-  // Subscribe to changes in filteredTransactions to automatically trigger UI renders
-  subscribe("filteredTransactions", () => {
-    renderTable();
-    renderSummary();
-    renderCharts();
-    if (typeof renderTrends === "function") {
-      renderTrends();
-    }
-  });
+  try {
+    // 1. Fetch structural templates dynamically
+    await loadTemplates();
 
-  setupFileUpload();
+    // 2. Map DOM pointers post-load
+    initElements();
 
-  initializeFilters();
+    // Subscribe to changes in filteredTransactions to automatically trigger UI renders
+    subscribe("filteredTransactions", () => {
+      renderTable();
+      renderSummary();
+      renderCharts();
+      if (typeof renderTrends === "function") {
+        renderTrends();
+      }
+    });
 
-  console.log(
-    "FinLens initialized"
-  );
+    setupFileUpload();
 
-  // Auto-load data from local DB on startup
-  await syncAndPoll();
+    initializeFilters();
+
+    console.log("FinLens initialized");
+
+    // Auto-load data from local DB on startup
+    await syncAndPoll();
+  } catch (error) {
+    console.error("App boot failure:", error);
+    // Render fallbacks or visual indicators if fetching fails
+    const toastModule = await import("./ui.js");
+    toastModule.showToast("Boot Error: " + error.message, "error");
+  }
 }
 
 // ===============================

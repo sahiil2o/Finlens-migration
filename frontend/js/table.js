@@ -5,20 +5,18 @@ import { CATEGORIES } from "./categorizer.js";
 // DOM ELEMENTS
 // ===============================
 
-const tbody =
-  document.getElementById("tbody");
-
-const txnCount =
-  document.getElementById("txn-count");
-
-const noResults =
-  document.getElementById("no-results");
+let tbody;
+let txnCount;
+let noResults;
 
 // ===============================
 // MAIN TABLE RENDER
 // ===============================
 
 export function renderTable() {
+  if (!tbody) tbody = document.getElementById("tbody");
+  if (!txnCount) txnCount = document.getElementById("txn-count");
+  if (!noResults) noResults = document.getElementById("no-results");
 
   const transactions =
     AppState.filteredTransactions;
