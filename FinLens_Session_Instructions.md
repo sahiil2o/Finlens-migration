@@ -42,7 +42,8 @@
   * **Stage 5:** Extracted monolithic inline HTML string interpolation blocks from `summary.js` into modular functional template component modules inside `components/` (e.g. `StatCard.js`, `AccountCard.js`, `SalaryCycleCard.js`).
   * **Stage 6:** Decoupled Express routers from business logic by introducing modular MVC Controllers in `controllers/` (transactions, vendors, analytics), keeping routes files purely responsible for path definitions.
   * **Stage 7:** Introduced a root `.env` config file and custom zero-dependency native ESM loader in `config.js` to dynamically load configuration parameters (Express server `PORT`, SQLite database `DB_PATH`) in `server.js` and `database.js`.
-  * **Result:** `server.js` is a database-agnostic mounting wrapper, routes are isolated in `/routes/`, business handler logic resides cleanly in `/controllers/`, database access is handled in `database.js` using dynamic `.env` configurations, and the frontend communicates reactively using events and components. The entire workspace is fully functional and stable.
+  * **Stage 8 (HTML & CSS Modularization):** Decoupled massive visual markup in `index.html` (~1050 lines) into independent HTML fragment templates inside `frontend/templates/` (`upload.html`, `dashboard.html`, `spend.html`, `cashflow.html`, `vendors.html`, `table.html`), loading them dynamically in parallel using an async `loadTemplates()` helper inside `app.js` prior to elements mapping. Split visual inline styles into modular CSS tab sheets under `frontend/css/` (`global.css`, `upload.css`, `dashboard.css`, `trends.css`, `vendors.css`, `table.css`).
+  * **Result:** `server.js` is a database-agnostic mounting wrapper, routes are isolated in `/routes/`, business handler logic resides cleanly in `/controllers/`, database access is handled in `database.js` using dynamic `.env` configurations. The frontend has a lightweight 50-line entry shell, dynamic parallel template loading, decoupled tab-specific stylesheets, and deferred DOM queries, completely resolving startup null references. The entire workspace is fully functional and stable.
 
 ---
 
@@ -50,3 +51,4 @@
 
 1. Read current active conversation logs or check in with the user for their next desired feature.
 2. Maintain modularity: When adding new APIs or analytical features, place them in the respective router in `/routes/` or create a new modular router, keeping `database.js` as the repository layer and `helpers.js` / `calculator.js` as analytical units.
+3. Keep the frontend clean and template-driven: If you add new tab content or major UI sections, isolate their templates in `templates/` and styles in `css/`, registering them dynamically in `app.js`.
