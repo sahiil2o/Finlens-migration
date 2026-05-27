@@ -38,7 +38,8 @@
   * **Stage 1:** Separated math/analytical financial equations from DOM rendering logic in the frontend (`calculator.js` handles metrics, `summary.js` strictly handles rendering).
   * **Stage 2:** Decoupled SQLite raw queries out of routing controllers in `server.js` into promise-based repository functions in `database.js`.
   * **Stage 3:** Split monolithic routing in `server.js` into modular Express routing files under `/routes/` (for transactions, vendors, and analytics), and moved shared utilities to `helpers.js`.
-  * **Result:** `server.js` is now a highly concise, database-agnostic ~40-line mounting wrapper. The entire workspace is fully functional and stable.
+  * **Stage 4:** Introduced a reactive Pub/Sub state store using a JavaScript Proxy in `state.js`, completely decoupling `filters.js` from visual rendering modules (`table.js`, `summary.js`, `charts.js`, `trends.js`).
+  * **Result:** `server.js` is a database-agnostic ~40-line mounting wrapper, and the frontend components communicate reactively via state-driven events. The entire workspace is fully functional and stable.
 
 ---
 
