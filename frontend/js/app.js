@@ -1,4 +1,4 @@
-import { AppState } from "./state.js";
+import { AppState, subscribe } from "./state.js";
 
 import { parseHDFC } from "./parser.js";
 
@@ -98,6 +98,15 @@ let pollingInterval = null;
 initializeApp();
 
 async function initializeApp() {
+  // Subscribe to changes in filteredTransactions to automatically trigger UI renders
+  subscribe("filteredTransactions", () => {
+    renderTable();
+    renderSummary();
+    renderCharts();
+    if (typeof renderTrends === "function") {
+      renderTrends();
+    }
+  });
 
   setupFileUpload();
 
@@ -725,14 +734,7 @@ function validateFile(file) {
 // ===============================
 
 function renderDashboard() {
-
   showDashboard();
-
-  renderTable();
-
-  renderSummary();
-
-  renderCharts();
 }
 
 // ===============================

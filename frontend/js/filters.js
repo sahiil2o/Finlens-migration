@@ -1,8 +1,4 @@
 import { AppState } from "./state.js";
-import { renderTable } from "./table.js";
-import { renderSummary } from "./summary.js";
-import { renderCharts } from "./charts.js";
-import { renderTrends } from "./trends.js";
 
 // ===============================
 // DOM ELEMENTS
@@ -219,17 +215,7 @@ export function applyFilters() {
   AppState.filteredTransactions =
     filtered;
 
-  // ===============================
-  // RE-RENDER UI
-  // ===============================
 
-  renderTable();
-
-  renderSummary();
-
-  renderCharts();
-
-  renderTrends();
 
   // ===============================
   // UPDATE HEADER ARROWS
