@@ -18,9 +18,13 @@ const VALID_CATEGORIES = [
   "food",
   "grocery",
   "shopping",
+  "rent",
   "bills",
   "fuel",
   "entertainment",
+  "salary",
+  "family",
+  "reimbursement",
   "payment",
   "travel",
   "health",
@@ -86,10 +90,14 @@ Categorize the vendor description into one of these strict categories:
 - food: Restaurants, food delivery, cafes, bakeries (e.g. Swiggy, Zomato, Starbucks, Domino's, food joints)
 - grocery: Supermarkets, quick-commerce, organic stores, daily essentials (e.g. Blinkit, Zepto, BigBasket, Instamart)
 - shopping: Apparel, e-commerce, electronics, retail stores, home decor (e.g. Amazon, Flipkart, Myntra, Ajio, Nykaa)
+- rent: Monthly rent payments, house rent, maintenance, landlady/landlord transfers (e.g. Sowerent, rent payment, society rent)
 - bills: Utility bills, internet recharges, phone bills, insurance, subscriptions, school fees (e.g. Jio, Airtel, ACT Broadband, Netflix, Spotify, Acko, insurance)
 - fuel: Petrol pumps, service stations (e.g. HPCL, BPCL, IOCL, shell, fuel)
 - entertainment: Movies, theatres, event bookings, gaming centers (e.g. BookMyShow, PVR, Inox, playzones)
-- payment: Credit card repayments, bank transfers, money received, cashback, refunds
+- salary: Salary income, corporate payroll, stipends, paychecks, co-op deposits
+- family: Transfers to parents (e.g. Swati Talekar, Nilesh Talekar), sister (e.g. Nishita Talekar), or general family support
+- reimbursement: Split-shares, contributions from roommates or friends for shared expenses, dinner splits, refunds, cashback, reversals
+- payment: General credit card repayments, general bank transfers, or payment operations not matching rent, salary, family support, or split reimbursement
 - travel: Cabs, auto-rickshaws, metro, train bookings, flight tickets, bus rides (e.g., Uber, Ola, IRCTC, MakeMyTrip, Indigo)
 - health: Medical consultations, pharmacies, hospitals, diagnostic centers (e.g., Apollo Pharmacy, Medplus, Practo, clinics)
 - investment: Mutual funds, stocks, trading accounts, bank transfers to brokers (e.g., Groww, Zerodha, AngelOne)
@@ -112,6 +120,11 @@ Examples:
 - "APOLLO PHARMACY BLR" -> health
 - "GROWW INVT SOLUTIONS" -> investment
 - "SPAYBBPS JIO FIBRE" -> bills
+- "SALARY BNP PARIBAS" -> salary
+- "UPI-ROOMMATE SPLIT RENT" -> reimbursement
+- "SOWERENT TECHNOLOG Y LLP" -> rent
+- "UPI-SWATI TALEKAR" -> family
+- "UPI-NISHITA N TALEKAR" -> family
 
 Vendor to categorize: "${vendor}"
 Response (strictly one word):`;

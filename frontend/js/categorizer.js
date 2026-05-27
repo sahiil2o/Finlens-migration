@@ -63,6 +63,17 @@ export const CATEGORIES = {
     ]
   },
 
+  rent: {
+    label: "Rent Payment",
+    color: "#c084fc",
+    keywords: [
+      "sowerent",
+      "rent payment",
+      "house rent",
+      "monthly rent"
+    ]
+  },
+
   bills: {
     label: "Bills & Recharge",
     color: "#a78bfa",
@@ -75,8 +86,6 @@ export const CATEGORIES = {
       "act fibernet",
       "insurance",
       "acko",
-      "rent",
-      "sowerent",
       "maintenance",
       "electricity",
       "power",
@@ -120,15 +129,49 @@ export const CATEGORIES = {
     ]
   },
 
+  salary: {
+    label: "Salary Income",
+    color: "#0ea5e9",
+    keywords: [
+      "salary",
+      "bnp paribas",
+      "payroll",
+      "stipend"
+    ]
+  },
+
+  family: {
+    label: "Family Support",
+    color: "#f43f5e",
+    keywords: [
+      "swati",
+      "nilesh",
+      "nishita",
+      "talekar"
+    ]
+  },
+
+  reimbursement: {
+    label: "Split / Reimbursement",
+    color: "#e8f54e",
+    keywords: [
+      "split",
+      "share",
+      "contribution",
+      "reimbursement",
+      "roommate",
+      "refund",
+      "reversal",
+      "cashback"
+    ]
+  },
+
   payment: {
     label: "Payment / Credit",
     color: "#94a3b8",
     keywords: [
       "payment",
       "autopay",
-      "refund",
-      "cashback",
-      "reversal",
       "transfer"
     ]
   },
@@ -303,22 +346,6 @@ export function categorizeTransactions(
   for (const transaction of transactions) {
 
     // ===============================
-    // CREDIT TRANSACTIONS
-    // ===============================
-
-    if (
-      transaction.type === "credit"
-    ) {
-
-      categorized.push({
-        ...transaction,
-        category: "payment"
-      });
-
-      continue;
-    }
-
-    // ===============================
     // RULE MATCH
     // ===============================
 
@@ -326,6 +353,11 @@ export function categorizeTransactions(
       detectCategory(
         transaction.description
       );
+
+    // For credits, if they don't match any specific rule-based category, default to payment
+    if (transaction.type === "credit" && category === "other") {
+      category = "payment";
+    }
 
     // ===============================
     // IMMEDIATE RETURN

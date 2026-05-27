@@ -22,3 +22,16 @@ CREATE TABLE IF NOT EXISTS vendors (
     first_seen TEXT,
     last_seen TEXT
 );
+CREATE TABLE IF NOT EXISTS account_metadata (
+    account_id TEXT PRIMARY KEY,
+    account_type TEXT,
+    card_last4 TEXT,
+    stmt_date TEXT,
+    due_date TEXT,
+    total_due REAL,
+    min_due REAL,
+    credit_limit REAL,
+    available_limit REAL,
+    od_limit REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

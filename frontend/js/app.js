@@ -276,6 +276,15 @@ async function processFile(file) {
 
     saveAccountMeta(meta);
 
+    // Persist account metadata to backend database
+    fetch("http://localhost:3000/metadata", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ metadata: meta })
+    }).catch(err => console.error("Failed to save metadata to backend:", err));
+
     const categorizedTransactions =
 
       categorizeTransactions(
@@ -374,6 +383,31 @@ async function loadTransactionsFromDB() {
 
     AppState.filteredTransactions =
       transactions;
+
+    // Sync and restore account metadata from the backend
+    try {
+      const metaResponse = await fetch("http://localhost:3000/metadata");
+      if (metaResponse.ok) {
+        const metaRows = await metaResponse.json();
+        for (const meta of metaRows) {
+          const frontendMeta = {
+            accountId: meta.account_id,
+            accountType: meta.account_type,
+            cardLast4: meta.card_last4,
+            stmtDate: meta.stmt_date,
+            dueDate: meta.due_date,
+            totalDue: Number(meta.total_due),
+            minDue: Number(meta.min_due),
+            creditLimit: Number(meta.credit_limit),
+            availableLimit: Number(meta.available_limit),
+            odLimit: Number(meta.od_limit)
+          };
+          localStorage.setItem(`meta_${meta.account_id}`, JSON.stringify(frontendMeta));
+        }
+      }
+    } catch (metaErr) {
+      console.error("Failed to sync account metadata:", metaErr);
+    }
 
     if (transactions && transactions.length > 0) {
       showDashboard();

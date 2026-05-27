@@ -12,7 +12,9 @@ import {
   initializeDatabase,
   saveTransactions,
   getTransactions,
-  getVendors
+  getVendors,
+  saveAccountMetadata,
+  getAccountMetadata
 } from "./database.js";
 
 import {
@@ -443,6 +445,40 @@ app.get(
 );
 
 // ===============================
+// GET & POST ACCOUNT METADATA
+// ===============================
+
+app.post(
+  "/metadata",
+  async (req, res) => {
+    try {
+      const { metadata } = req.body;
+      if (!metadata || !metadata.accountId) {
+        return res.status(400).json({ error: "Metadata with accountId required" });
+      }
+      await saveAccountMetadata(metadata);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to save metadata:", error);
+      res.status(500).json({ error: "Failed to save metadata" });
+    }
+  }
+);
+
+app.get(
+  "/metadata",
+  async (req, res) => {
+    try {
+      const rows = await getAccountMetadata();
+      res.json(rows);
+    } catch (error) {
+      console.error("Failed to fetch metadata:", error);
+      res.status(500).json({ error: "Failed to fetch metadata" });
+    }
+  }
+);
+
+// ===============================
 // GET ALL VENDORS
 // ===============================
 app.get(
@@ -678,7 +714,6 @@ app.post(
   }
 );
 
-// ===============================
 // SAVE TRANSACTIONS
 // ===============================
 

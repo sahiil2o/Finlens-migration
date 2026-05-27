@@ -194,9 +194,13 @@ function renderCategoryBadge(
         <option value="food">Food & Dining</option>
         <option value="grocery">Grocery</option>
         <option value="shopping">Shopping</option>
+        <option value="rent">Rent Payment</option>
         <option value="bills">Bills & Recharge</option>
         <option value="fuel">Fuel</option>
         <option value="entertainment">Entertainment</option>
+        <option value="salary">Salary Income</option>
+        <option value="family">Family Support</option>
+        <option value="reimbursement">Split / Reimbursement</option>
         <option value="payment">Payment / Credit</option>
         <option value="travel">Travel & Cabs</option>
         <option value="health">Health & Pharma</option>
@@ -215,9 +219,13 @@ function renderCategoryBadge(
       <option value="food" ${transaction.category === "food" ? "selected" : ""}>Food & Dining</option>
       <option value="grocery" ${transaction.category === "grocery" ? "selected" : ""}>Grocery</option>
       <option value="shopping" ${transaction.category === "shopping" ? "selected" : ""}>Shopping</option>
+      <option value="rent" ${transaction.category === "rent" ? "selected" : ""}>Rent Payment</option>
       <option value="bills" ${transaction.category === "bills" ? "selected" : ""}>Bills & Recharge</option>
       <option value="fuel" ${transaction.category === "fuel" ? "selected" : ""}>Fuel</option>
       <option value="entertainment" ${transaction.category === "entertainment" ? "selected" : ""}>Entertainment</option>
+      <option value="salary" ${transaction.category === "salary" ? "selected" : ""}>Salary Income</option>
+      <option value="family" ${transaction.category === "family" ? "selected" : ""}>Family Support</option>
+      <option value="reimbursement" ${transaction.category === "reimbursement" ? "selected" : ""}>Split / Reimbursement</option>
       <option value="payment" ${transaction.category === "payment" ? "selected" : ""}>Payment / Credit</option>
       <option value="travel" ${transaction.category === "travel" ? "selected" : ""}>Travel & Cabs</option>
       <option value="health" ${transaction.category === "health" ? "selected" : ""}>Health & Pharma</option>
@@ -306,10 +314,17 @@ window.manuallyCategorize = async function(normalizedName, category, selectEleme
     food: "#ff6b4a",
     grocery: "#f5a623",
     shopping: "#5e6bff",
+    rent: "#c084fc",
     bills: "#a78bfa",
     fuel: "#3de89b",
     entertainment: "#f472b6",
+    salary: "#0ea5e9",
+    family: "#f43f5e",
+    reimbursement: "#e8f54e",
     payment: "#94a3b8",
+    travel: "#38bdf8",
+    health: "#ec4899",
+    investment: "#10b981",
     other: "#475569"
   };
 
@@ -377,9 +392,13 @@ window.renderCachePanel = async function() {
             <option value="food" ${v.category === "food" ? "selected" : ""}>Food</option>
             <option value="grocery" ${v.category === "grocery" ? "selected" : ""}>Grocery</option>
             <option value="shopping" ${v.category === "shopping" ? "selected" : ""}>Shopping</option>
+            <option value="rent" ${v.category === "rent" ? "selected" : ""}>Rent</option>
             <option value="bills" ${v.category === "bills" ? "selected" : ""}>Bills</option>
             <option value="fuel" ${v.category === "fuel" ? "selected" : ""}>Fuel</option>
             <option value="entertainment" ${v.category === "entertainment" ? "selected" : ""}>Entertainment</option>
+            <option value="salary" ${v.category === "salary" ? "selected" : ""}>Salary</option>
+            <option value="family" ${v.category === "family" ? "selected" : ""}>Family</option>
+            <option value="reimbursement" ${v.category === "reimbursement" ? "selected" : ""}>Split / Reimbursement</option>
             <option value="payment" ${v.category === "payment" ? "selected" : ""}>Payment</option>
             <option value="travel" ${v.category === "travel" ? "selected" : ""}>Travel</option>
             <option value="health" ${v.category === "health" ? "selected" : ""}>Health</option>
@@ -413,9 +432,13 @@ const categoryColors = {
   food: "#ff6b4a",
   grocery: "#f5a623",
   shopping: "#5e6bff",
+  rent: "#c084fc",
   bills: "#a78bfa",
   fuel: "#3de89b",
   entertainment: "#f472b6",
+  salary: "#0ea5e9",
+  family: "#f43f5e",
+  reimbursement: "#e8f54e",
   payment: "#94a3b8",
   travel: "#38bdf8",
   health: "#ec4899",

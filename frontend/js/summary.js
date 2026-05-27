@@ -32,6 +32,9 @@ function renderAccountsStrip() {
   const isSpend = (t) => {
     if (t.type !== "debit") return false;
     const desc = t.description?.toLowerCase() || "";
+    if (t.sourceBank && t.sourceBank.includes("Savings")) {
+      return true;
+    }
     const excludedPatterns = ["credit card", "card payment", "cc payment", "autopay", "refund", "reversal", "cashback"];
     return !excludedPatterns.some(pat => desc.includes(pat));
   };
@@ -43,6 +46,15 @@ function renderAccountsStrip() {
       if (t.sourceBank) {
         accountSpends[t.sourceBank] = (accountSpends[t.sourceBank] || 0) + (Number(t.amount) || 0);
       }
+    }
+  }
+
+  // Net out roommate contributions (reimbursement credits) from savings spends in the carousel cards
+  for (const acct of uniqueAccounts) {
+    if (acct.includes("Savings")) {
+      const acctReimbursements = transactions.filter(t => t.sourceBank === acct && t.type === "credit" && t.category === "reimbursement");
+      const reimbursementsSum = acctReimbursements.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      accountSpends[acct] = Math.max(0, (accountSpends[acct] || 0) - reimbursementsSum);
     }
   }
 
@@ -153,10 +165,26 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
     for (const cc of uniqueCcs) {
       try {
         const savedMeta = JSON.parse(localStorage.getItem(`meta_${cc}`));
+        
+        const parseDateStr = (dateStr) => {
+          if (!dateStr) return new Date(0);
+          const parts = dateStr.split("/");
+          if (parts.length === 3) {
+            let [dd, mm, yyyy] = parts;
+            if (yyyy.length === 2) yyyy = "20" + yyyy;
+            return new Date(`${yyyy}-${mm}-${dd}`);
+          }
+          return new Date(dateStr);
+        };
+
         if (savedMeta) {
           let ccDue = Number(savedMeta.totalDue) || 0;
           if (ccDue === 0) {
-            const ccTxns = (AppState.transactions || []).filter(t => t.sourceBank === cc && t.type === "debit");
+            const ccTxnsAll = (AppState.transactions || []).filter(t => t.sourceBank === cc);
+            const stmtDates = [...new Set(ccTxnsAll.map(t => t.statementDate))].filter(Boolean);
+            stmtDates.sort((a, b) => parseDateStr(b) - parseDateStr(a));
+            const latestStmt = stmtDates[0];
+            const ccTxns = ccTxnsAll.filter(t => t.type === "debit" && (!latestStmt || t.statementDate === latestStmt));
             ccDue = ccTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
             savedMeta.totalDue = ccDue;
             localStorage.setItem(`meta_${cc}`, JSON.stringify(savedMeta));
@@ -172,8 +200,13 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
           creditLimitSum = Math.max(creditLimitSum, limit); // Shared limit!
         } else {
           // Fallback metadata block if not present
-          const ccTxns = (AppState.transactions || []).filter(t => t.sourceBank === cc && t.type === "debit");
+          const ccTxnsAll = (AppState.transactions || []).filter(t => t.sourceBank === cc);
+          const stmtDates = [...new Set(ccTxnsAll.map(t => t.statementDate))].filter(Boolean);
+          stmtDates.sort((a, b) => parseDateStr(b) - parseDateStr(a));
+          const latestStmt = stmtDates[0];
+          const ccTxns = ccTxnsAll.filter(t => t.type === "debit" && (!latestStmt || t.statementDate === latestStmt));
           const ccDue = ccTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          
           const fallbackCC = { accountId: cc, totalDue: ccDue, creditLimit: 150000, accountType: "credit" };
           localStorage.setItem(`meta_${cc}`, JSON.stringify(fallbackCC));
           totalDueSum += ccDue;
@@ -207,6 +240,8 @@ export function renderSummary() {
   const transactions = AppState.filteredTransactions;
   const meta = AppState.meta || {};
 
+  const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
+
   // ===========================
   // SPENDING TRANSACTIONS
   // ===========================
@@ -216,14 +251,16 @@ export function renderSummary() {
 
     const description = transaction.description?.toLowerCase() || "";
 
-    // Exclude payment loops/transfers
-    if (
-      description.includes("credit card") ||
-      description.includes("card payment") ||
-      description.includes("cc payment") ||
-      description.includes("autopay")
-    ) {
-      return false;
+    // Exclude payment loops/transfers ONLY if NOT savings account
+    if (!isSavingsAccount) {
+      if (
+        description.includes("credit card") ||
+        description.includes("card payment") ||
+        description.includes("cc payment") ||
+        description.includes("autopay")
+      ) {
+        return false;
+      }
     }
 
     return true;
@@ -233,13 +270,21 @@ export function renderSummary() {
   // CALCULATIONS
   // ===========================
 
-  const totalSpend = spendTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  let totalSpend = spendTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  
+  // If it's a savings account, subtract roommate split contributions from the total spent sum!
+  let reimbursementCreditsSum = 0;
+  if (isSavingsAccount) {
+    const reimbursementCredits = transactions.filter(t => t.type === "credit" && t.category === "reimbursement");
+    reimbursementCreditsSum = reimbursementCredits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    totalSpend = Math.max(0, totalSpend - reimbursementCreditsSum);
+  }
+
   const totalCredits = transactions
     .filter(t => t.type === "credit")
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const txnCount = transactions.length;
-  const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
 
   let totalDue = Number(meta.totalDue) || 0;
   if (!isSavingsAccount && totalDue === 0) {
@@ -383,6 +428,140 @@ export function renderSummary() {
         ${statusText}
       </div>
     `;
+  }
+
+  // ===========================
+  // SALARY CYCLE SPEND ANALYTICS
+  // ===========================
+  const salaryCycleSection = document.getElementById("salary-cycle-section");
+  if (salaryCycleSection) {
+    if (isSavingsAccount && meta.accountId) {
+      // 1. Get all transactions for this savings account
+      const acctTxns = (AppState.transactions || []).filter(t => t.sourceBank === meta.accountId);
+      
+      // 2. Find all salary credits
+      const salaryCredits = acctTxns.filter(t => t.type === "credit" && t.category === "salary");
+      
+      // Sort chronologically ascending
+      salaryCredits.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      if (salaryCredits.length >= 1) {
+        const cycles = [];
+        
+        for (let i = 0; i < salaryCredits.length; i++) {
+          const currentSalary = salaryCredits[i];
+          const startDate = new Date(currentSalary.date);
+          
+          let endDate = null;
+          let isCurrentCycle = false;
+          
+          if (i + 1 < salaryCredits.length) {
+            endDate = new Date(salaryCredits[i + 1].date);
+          } else {
+            isCurrentCycle = true;
+            const txnDates = acctTxns.map(t => new Date(t.date)).filter(d => !isNaN(d.getTime()));
+            endDate = txnDates.length ? new Date(Math.max(...txnDates)) : new Date();
+            endDate.setDate(endDate.getDate() + 1);
+          }
+          
+          const cycleSpendTxns = acctTxns.filter(t => {
+            if (t.type !== "debit") return false;
+            const tDate = new Date(t.date);
+            if (isNaN(tDate.getTime())) return false;
+            
+            if (tDate < startDate || tDate >= endDate) return false;
+            
+            // We now KEEP credit card autopays as real spends!
+            return true;
+          });
+          
+          const cycleSpend = cycleSpendTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          
+          // Get all roommate split/reimbursement credits during this cycle
+          const cycleReimbursementsTxns = acctTxns.filter(t => {
+            if (t.type !== "credit" || t.category !== "reimbursement") return false;
+            const tDate = new Date(t.date);
+            if (isNaN(tDate.getTime())) return false;
+            return tDate >= startDate && tDate < endDate;
+          });
+          
+          const cycleReimbursements = cycleReimbursementsTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          const netSpend = Math.max(0, cycleSpend - cycleReimbursements);
+
+          const endDisplay = i + 1 < salaryCredits.length 
+            ? new Date(salaryCredits[i + 1].date) 
+            : new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+            
+          cycles.push({
+            salaryAmount: Number(currentSalary.amount),
+            salaryDate: startDate,
+            endDate: endDisplay,
+            spend: cycleSpend,
+            reimbursements: cycleReimbursements,
+            netSpend: netSpend,
+            isCurrent: isCurrentCycle
+          });
+        }
+        
+        cycles.reverse();
+        
+        const formatDateLabel = (d) => {
+          return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        };
+        
+        const formatPercent = (val) => {
+          return `${Number(val).toFixed(1)}%`;
+        };
+        
+        salaryCycleSection.style.display = "flex";
+        salaryCycleSection.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <p style="font-family:var(--font-head); font-size:0.85rem; font-weight:600; color:var(--text);">💰 Salary Cycle Spend Tracking</p>
+            <p style="font-size:0.68rem; color:var(--muted);">Slices spend between salary credits</p>
+          </div>
+          
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            ${cycles.map((c, idx) => {
+              const util = c.salaryAmount ? (c.netSpend / c.salaryAmount) * 100 : 0;
+              const barColor = util > 80 ? "var(--red)" : (util > 50 ? "var(--amber)" : "var(--green)");
+              const statusText = util > 100 ? "Deficit" : (util > 80 ? "High Spend" : "Healthy Save");
+              const statusColor = util > 80 ? "var(--red)" : (util > 50 ? "var(--amber)" : "var(--green)");
+              
+              return `
+                <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div>
+                      <p style="font-size:0.75rem; font-weight:600; color:var(--text);">
+                        Cycle: ${formatDateLabel(c.salaryDate)} – ${formatDateLabel(c.endDate)}
+                        ${c.isCurrent ? '<span style="font-size:0.6rem; background:rgba(94,107,255,0.15); color:var(--accent2); border:1px solid rgba(94,107,255,0.25); border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; text-transform:uppercase;">Active</span>' : ''}
+                      </p>
+                      <p style="font-size:0.65rem; color:var(--muted); margin-top:2px;">Credited: ${formatCurrency(c.salaryAmount)}</p>
+                    </div>
+                    <div style="text-align:right;">
+                      <p style="font-family:var(--font-head); font-size:0.85rem; font-weight:700; color:${statusColor};">${formatPercent(util)} Spent</p>
+                      <p style="font-size:0.65rem; color:var(--muted); margin-top:2px;">Net Spent: ${formatCurrency(c.netSpend)}</p>
+                    </div>
+                  </div>
+                  
+                  <div style="height:6px; background:var(--surface); border-radius:3px; overflow:hidden;">
+                    <div style="height:100%; border-radius:3px; background:${barColor}; width:${Math.min(util, 100)}%;"></div>
+                  </div>
+                  
+                  <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; color:var(--muted); flex-wrap:wrap; gap:6px;">
+                    <span>Outflows: ${formatCurrency(c.spend)} &nbsp;·&nbsp; Splits: −${formatCurrency(c.reimbursements)}</span>
+                    <span style="font-weight:600; color:${statusColor}; border:1px solid ${statusColor}; border-radius:10px; padding:1px 8px; font-size:0.6rem; text-transform:uppercase;">${statusText}</span>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `;
+      } else {
+        salaryCycleSection.style.display = "none";
+      }
+    } else {
+      salaryCycleSection.style.display = "none";
+    }
   }
 }
 
