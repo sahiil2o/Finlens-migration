@@ -1,5 +1,8 @@
 import { AppState } from "./state.js";
 import { calculateSpendTotals, calculateSalaryCycles } from "./calculator.js";
+import { renderStatCard } from "./components/StatCard.js";
+import { renderOverviewSelectorCard, renderAccountSelectorCard } from "./components/AccountCard.js";
+import { renderSalaryCycleCard } from "./components/SalaryCycleCard.js";
 
 // ===============================
 // DOM ELEMENTS
@@ -64,21 +67,7 @@ function renderAccountsStrip() {
   const cardsHtml = [];
 
   // 1. Overall Spends Widget (All Accounts)
-  cardsHtml.push(`
-    <div 
-      class="account-card overview ${activeAccountId === "" ? "active" : ""}"
-      onclick="selectAccount('')"
-    >
-      <div>
-        <p class="account-card-title">All Accounts Overview</p>
-        <p class="account-card-subtitle">Aggregated overall spends</p>
-      </div>
-      <div>
-        <p class="account-card-spend">₹${totalSpendAll.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</p>
-      </div>
-      <div class="account-card-chip"></div>
-    </div>
-  `);
+  cardsHtml.push(renderOverviewSelectorCard(totalSpendAll, activeAccountId === ""));
 
   // 2. Individual Cards & Accounts
   for (const acct of uniqueAccounts) {
@@ -118,22 +107,14 @@ function renderAccountsStrip() {
       } catch {}
     }
 
-    cardsHtml.push(`
-      <div 
-        class="account-card ${activeAccountId === acct ? "active" : ""}"
-        onclick="selectAccount('${acct}')"
-      >
-        <div>
-          <p class="account-card-title">${title}</p>
-          <p class="account-card-subtitle">${subtitle}</p>
-        </div>
-        <div>
-          <p class="account-card-subtitle" style="margin-top: 8px; font-size: 0.62rem; text-transform: uppercase; color: var(--muted);">${balLabel}</p>
-          <p class="account-card-spend">₹${Number(balValue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</p>
-        </div>
-        <div class="account-card-chip"></div>
-      </div>
-    `);
+    cardsHtml.push(renderAccountSelectorCard({
+      title,
+      subtitle,
+      balLabel,
+      balValue,
+      isActive: activeAccountId === acct,
+      accountId: acct
+    }));
   }
 
   container.innerHTML = cardsHtml.join("");
@@ -292,25 +273,25 @@ export function renderSummary() {
     if (hasOdLimit) {
       const netColor = totalDue < 0 ? "#ff5a5a" : "#3de89b";
       summaryStrip.innerHTML = `
-        ${buildCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
-        ${buildCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
-        ${buildCard("Net Balance", formatCurrency(totalDue), "Closing account balance", netColor)}
-        ${buildCard("Available Balance", formatCurrency(availableBalance), "OD + Savings Balance", "#e8f54e")}
+        ${renderStatCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
+        ${renderStatCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
+        ${renderStatCard("Net Balance", formatCurrency(totalDue), "Closing account balance", netColor)}
+        ${renderStatCard("Available Balance", formatCurrency(availableBalance), "OD + Savings Balance", "#e8f54e")}
       `;
     } else {
       summaryStrip.innerHTML = `
-        ${buildCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
-        ${buildCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
-        ${buildCard("Transactions", txnCount, "Visible transactions count", "#5e6bff")}
-        ${buildCard("Account Balance", formatCurrency(totalDue), "Current savings balance", "#3de89b")}
+        ${renderStatCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
+        ${renderStatCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
+        ${renderStatCard("Transactions", txnCount, "Visible transactions count", "#5e6bff")}
+        ${renderStatCard("Account Balance", formatCurrency(totalDue), "Current savings balance", "#3de89b")}
       `;
     }
   } else {
     summaryStrip.innerHTML = `
-      ${buildCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
-      ${buildCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
-      ${buildCard("Transactions", txnCount, "Visible transactions count", "#5e6bff")}
-      ${buildCard("Total Statement Due", formatCurrency(totalDue), "Current statement balance", "#e8f54e")}
+      ${renderStatCard("Total Spend", formatCurrency(totalSpend), "Filtered spend debits", "#ff5a5a")}
+      ${renderStatCard("Payments & Credits", formatCurrency(totalCredits), "Credits received", "#3de89b")}
+      ${renderStatCard("Transactions", txnCount, "Visible transactions count", "#5e6bff")}
+      ${renderStatCard("Total Statement Due", formatCurrency(totalDue), "Current statement balance", "#e8f54e")}
     `;
   }
 
@@ -385,15 +366,6 @@ export function renderSummary() {
       const cycles = calculateSalaryCycles(AppState.transactions || [], meta.accountId);
       
       if (cycles.length >= 1) {
-        
-        const formatDateLabel = (d) => {
-          return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-        };
-        
-        const formatPercent = (val) => {
-          return `${Number(val).toFixed(1)}%`;
-        };
-        
         salaryCycleSection.style.display = "flex";
         salaryCycleSection.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
@@ -402,39 +374,7 @@ export function renderSummary() {
           </div>
           
           <div style="display:flex; flex-direction:column; gap:10px;">
-            ${cycles.map((c, idx) => {
-              const util = c.salaryAmount ? (c.netSpend / c.salaryAmount) * 100 : 0;
-              const barColor = util > 80 ? "var(--red)" : (util > 50 ? "var(--amber)" : "var(--green)");
-              const statusText = util > 100 ? "Deficit" : (util > 80 ? "High Spend" : "Healthy Save");
-              const statusColor = util > 80 ? "var(--red)" : (util > 50 ? "var(--amber)" : "var(--green)");
-              
-              return `
-                <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <div>
-                      <p style="font-size:0.75rem; font-weight:600; color:var(--text);">
-                        Cycle: ${formatDateLabel(c.salaryDate)} – ${formatDateLabel(c.endDate)}
-                        ${c.isCurrent ? '<span style="font-size:0.6rem; background:rgba(94,107,255,0.15); color:var(--accent2); border:1px solid rgba(94,107,255,0.25); border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; text-transform:uppercase;">Active</span>' : ''}
-                      </p>
-                      <p style="font-size:0.65rem; color:var(--muted); margin-top:2px;">Credited: ${formatCurrency(c.salaryAmount)}</p>
-                    </div>
-                    <div style="text-align:right;">
-                      <p style="font-family:var(--font-head); font-size:0.85rem; font-weight:700; color:${statusColor};">${formatPercent(util)} Spent</p>
-                      <p style="font-size:0.65rem; color:var(--muted); margin-top:2px;">Net Spent: ${formatCurrency(c.netSpend)}</p>
-                    </div>
-                  </div>
-                  
-                  <div style="height:6px; background:var(--surface); border-radius:3px; overflow:hidden;">
-                    <div style="height:100%; border-radius:3px; background:${barColor}; width:${Math.min(util, 100)}%;"></div>
-                  </div>
-                  
-                  <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; color:var(--muted); flex-wrap:wrap; gap:6px;">
-                    <span>Outflows: ${formatCurrency(c.spend)} &nbsp;·&nbsp; Splits: −${formatCurrency(c.reimbursements)}</span>
-                    <span style="font-weight:600; color:${statusColor}; border:1px solid ${statusColor}; border-radius:10px; padding:1px 8px; font-size:0.6rem; text-transform:uppercase;">${statusText}</span>
-                  </div>
-                </div>
-              `;
-            }).join("")}
+            ${cycles.map(renderSalaryCycleCard).join("")}
           </div>
         `;
       } else {
@@ -444,20 +384,6 @@ export function renderSummary() {
       salaryCycleSection.style.display = "none";
     }
   }
-}
-
-// ===============================
-// SUMMARY CARD BUILDER
-// ===============================
-
-function buildCard(label, value, sub, color) {
-  return `
-    <div class="stat-card fade-in" style="--card-accent:${color}">
-      <p class="stat-label">${label}</p>
-      <p class="stat-value">${value}</p>
-      <p class="stat-sub">${sub}</p>
-    </div>
-  `;
 }
 
 // ===============================
