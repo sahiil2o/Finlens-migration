@@ -4,14 +4,15 @@
 
 import fs from "fs";
 import path from "path";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 
 import {
   saveTransactions,
   getTransactions,
   saveAccountMetadata,
-  getAccountMetadata
-} from "../database.js";
+  getAccountMetadata,
+  linkTransactions
+} from "../db/index.js";
 
 import { normalizeTransactions } from "../helpers.js";
 import { enqueue } from "../aiQueue.js";
@@ -115,7 +116,7 @@ export function parseXlsHandler(req, res) {
     }
 
     const scriptPath = path.resolve("./parse_xls.py");
-    exec(`python "${scriptPath}" "${tempFile}"`, (execErr, stdout, stderr) => {
+    execFile("python", [scriptPath, tempFile], (execErr, stdout, stderr) => {
       // Always cleanup
       fs.unlink(tempFile, () => {});
 
@@ -136,4 +137,22 @@ export function parseXlsHandler(req, res) {
       }
     });
   });
+}
+
+/**
+ * POST /transactions/link
+ * Links a credit transaction hash to a debit transaction hash.
+ */
+export async function linkTransactionsHandler(req, res) {
+  try {
+    const { debitHash, creditHash } = req.body;
+    if (!debitHash) {
+      return res.status(400).json({ error: "debitHash is required" });
+    }
+    await linkTransactions(debitHash, creditHash);
+    res.json({ success: true, message: "Transaction linking state updated successfully." });
+  } catch (error) {
+    console.error("[TransactionsController] linkTransactions failed:", error);
+    res.status(500).json({ error: "Failed to link transactions" });
+  }
 }

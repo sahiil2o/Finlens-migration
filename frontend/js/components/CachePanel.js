@@ -3,6 +3,9 @@
 // ==========================================
 
 import { showToast } from "../ui.js";
+import { API_BASE } from "../config.js";
+import { AppState } from "../state.js";
+
 
 export const categoryColors = {
   food: "#ff6b4a",
@@ -19,6 +22,7 @@ export const categoryColors = {
   travel: "#38bdf8",
   health: "#ec4899",
   investment: "#10b981",
+  home: "#d97706",
   other: "#475569"
 };
 
@@ -32,7 +36,7 @@ window.manuallyCategorize = async function(normalizedName, category, selectEleme
   }
 
   try {
-    const response = await fetch("http://localhost:3000/vendors/categorize", {
+    const response = await fetch(`${API_BASE}/vendors/categorize`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -43,6 +47,22 @@ window.manuallyCategorize = async function(normalizedName, category, selectEleme
     if (!response.ok) {
       throw new Error("Override API responded with failure status");
     }
+
+    // 1. Update in-memory transactions lists to reflect this change instantly
+    let updatedCount = 0;
+    const txns = AppState.transactions || [];
+    for (const t of txns) {
+      if (t.normalized_merchant === normalizedName || t.normalizedMerchant === normalizedName) {
+        t.category = category;
+        t.ai_categorized = 1; // Mark as categorized
+        updatedCount++;
+      }
+    }
+    console.log(`Local AppState synchronized: assigned category "${category}" to ${updatedCount} transactions for merchant "${normalizedName}"`);
+
+    // 2. Trigger dynamic filters recalculation to automatically redraw cards, charts, trends and tables reactively
+    const filtersModule = await import("../filters.js");
+    filtersModule.refreshFilters();
 
     showToast(`Updated mapping for "${normalizedName}" to ${category}`);
 
@@ -68,7 +88,7 @@ window.showCachePanel = async function() {
  */
 window.renderCachePanel = async function() {
   try {
-    const response = await fetch("http://localhost:3000/vendors");
+    const response = await fetch(`${API_BASE}/vendors`);
     if (!response.ok) throw new Error("Failed to load mappings");
     
     const vendors = await response.json();
@@ -118,6 +138,7 @@ window.renderCachePanel = async function() {
             <option value="travel" ${v.category === "travel" ? "selected" : ""}>Travel</option>
             <option value="health" ${v.category === "health" ? "selected" : ""}>Health</option>
             <option value="investment" ${v.category === "investment" ? "selected" : ""}>Investment</option>
+            <option value="home" ${v.category === "home" ? "selected" : ""}>Home Services</option>
             <option value="other" ${v.category === "other" || !v.category ? "selected" : ""}>Other</option>
           </select>
         </div>
@@ -135,7 +156,7 @@ window.renderCachePanel = async function() {
 window.clearCache = async function() {
   if (!confirm("Are you sure you want to clear all vendor mappings and database categorization? This will reset all transaction categorization.")) return;
   try {
-    const response = await fetch("http://localhost:3000/vendors/clear-cache", { method: "POST" });
+    const response = await fetch(`${API_BASE}/vendors/clear-cache`, { method: "POST" });
     if (!response.ok) throw new Error("Failed to reset database cache");
     
     showToast("Vendor database cache reset successfully.");

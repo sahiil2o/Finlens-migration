@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     ai_categorized INTEGER DEFAULT 0,
     source_bank TEXT,
     statement_date TEXT,
+    linked_transaction_hash TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS vendors (
@@ -35,3 +36,10 @@ CREATE TABLE IF NOT EXISTS account_metadata (
     od_limit REAL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_transactions_normalized_merchant 
+  ON transactions(normalized_merchant);
+CREATE INDEX IF NOT EXISTS idx_transactions_source_bank 
+  ON transactions(source_bank);
+CREATE INDEX IF NOT EXISTS idx_transactions_date 
+  ON transactions(date);

@@ -184,43 +184,10 @@ function renderCategoryChart() {
   );
 
   // ===============================
-  // LEGEND
-  // ===============================
-
-  legend.innerHTML =
-
-    labels.map(label => {
-
-      const category =
-
-        CATEGORIES[label]
-
-        || CATEGORIES.other;
-
-      return `
-        <div class="legend-item">
-
-          <span
-            class="legend-swatch"
-            style="
-              background:${category.color}
-            "
-          ></span>
-
-          <span>
-            ${category.label}
-          </span>
-
-        </div>
-      `;
-    }).join("");
-
-  // ===============================
   // TOTAL SPEND
   // ===============================
 
   const totalSpend =
-
     values.reduce(
       (sum, value) =>
         sum + value,
@@ -233,10 +200,34 @@ function renderCategoryChart() {
     );
 
   if (totalElement) {
-
     totalElement.textContent =
       formatCurrency(totalSpend);
   }
+
+  const centerTotalEl = document.getElementById("donut-center-total");
+  if (centerTotalEl) {
+    centerTotalEl.textContent = "₹" + Math.round(totalSpend).toLocaleString("en-IN");
+  }
+
+  // ===============================
+  // LEGEND
+  // ===============================
+
+  legend.innerHTML =
+    labels.map((label, idx) => {
+      const category = CATEGORIES[label] || CATEGORIES.other;
+      const amt = values[idx] || 0;
+      const pct = totalSpend ? Math.round((amt / totalSpend) * 100) : 0;
+      const formattedAmt = amt.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+      return `
+        <div class="legend-item" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid var(--border2); padding: 4px 10px; border-radius: 20px; font-size: 0.68rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)';" onmouseout="this.style.background='rgba(255,255,255,0.02)';">
+          <span class="legend-swatch" style="background:${category.color}; width: 6px; height: 6px; border-radius: 50%;"></span>
+          <span style="color: var(--text);">${category.label}</span>
+          <span style="color: var(--muted); font-size: 0.6rem; font-family: var(--font-mono); font-weight: 500;">₹${formattedAmt} (${pct}%)</span>
+        </div>
+      `;
+    }).join("");
 }
 
 // ===============================
@@ -368,62 +359,90 @@ function renderTimelineChart() {
   }
 
   // ===============================
-  // CREATE CHART
+  // CREATE CHART WITH GRADIENT
   // ===============================
+
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, 0, 270);
+  gradient.addColorStop(0, "rgba(255, 90, 90, 0.8)"); // Coral glow at top
+  gradient.addColorStop(1, "rgba(255, 90, 90, 0.05)"); // Soft fade at bottom
 
   timelineChart = new Chart(
     canvas,
     {
       type: "bar",
-
       data: {
-
         labels,
-
         datasets: [
           {
             data: values,
-
-            borderRadius: 6
+            backgroundColor: gradient,
+            hoverBackgroundColor: "rgba(255, 90, 90, 1)",
+            borderColor: "#ff5a5a",
+            borderWidth: 1.5,
+            borderRadius: 6,
+            borderSkipped: false
           }
         ]
       },
-
       options: {
-
         responsive: true,
-
         maintainAspectRatio: false,
-
         plugins: {
-
           legend: {
             display: false
+          },
+          tooltip: {
+            backgroundColor: "rgba(13, 15, 20, 0.95)",
+            titleColor: "#ffffff",
+            titleFont: {
+              family: "'DM Mono', monospace",
+              size: 11,
+              weight: "bold"
+            },
+            bodyColor: "#ff9c9c",
+            bodyFont: {
+              family: "'DM Mono', monospace",
+              size: 12
+            },
+            borderColor: "rgba(255, 90, 90, 0.2)",
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              label: function(context) {
+                return "Spent: ₹" + Number(context.raw).toLocaleString("en-IN");
+              }
+            }
           }
         },
-
         scales: {
-
           x: {
-
             ticks: {
-              color: "#7b8196"
+              color: "#7b8196",
+              font: {
+                family: "'DM Mono', monospace",
+                size: 9
+              }
             },
-
             grid: {
               display: false
             }
           },
-
           y: {
-
             ticks: {
-              color: "#7b8196"
+              color: "#7b8196",
+              font: {
+                family: "'DM Mono', monospace",
+                size: 9
+              },
+              callback: function(value) {
+                return "₹" + value.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+              }
             },
-
             grid: {
-              color:
-                "rgba(255,255,255,0.05)"
+              color: "rgba(255, 255, 255, 0.05)"
             }
           }
         }

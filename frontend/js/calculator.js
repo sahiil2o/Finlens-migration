@@ -13,6 +13,18 @@
  */
 export function calculateSpendTotals(filteredTransactions, allTransactions, meta) {
   const isSavingsAccount = meta.accountType === "savings" || (meta.accountId && meta.accountId.includes("Savings"));
+  const allTxns = allTransactions || [];
+
+  // Helper to adjust debit amounts for explicitly linked credits (Strategy A)
+  const getAdjustedDebitAmount = (debit) => {
+    let amt = Number(debit.amount || 0);
+    const linkedCredits = allTxns.filter(t => 
+      t.type === "credit" && 
+      (t.linkedTransactionHash === debit.transactionHash || debit.linkedTransactionHash === t.transactionHash)
+    );
+    const linkedCreditsSum = linkedCredits.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+    return Math.max(0, amt - linkedCreditsSum);
+  };
 
   // 1. Filter Outflows (Debits)
   const spendTransactions = filteredTransactions.filter(transaction => {
@@ -33,15 +45,24 @@ export function calculateSpendTotals(filteredTransactions, allTransactions, meta
     return true;
   });
 
-  // 2. Compute Spend Total
-  let totalSpend = spendTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  // 2. Compute Spend Total (adjusted for Strategy A)
+  let totalSpend = spendTransactions.reduce((sum, t) => sum + getAdjustedDebitAmount(t), 0);
   
-  // For savings OD/Overdraft account, net out roommate split contributions
-  let reimbursementCreditsSum = 0;
+  // For savings OD/Overdraft account, net out general non-salary credits (Strategy C)
+  // excluding any credit that is already explicitly linked to any debit to avoid double-counting
   if (isSavingsAccount) {
-    const reimbursementCredits = filteredTransactions.filter(t => t.type === "credit" && t.category === "reimbursement");
-    reimbursementCreditsSum = reimbursementCredits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    totalSpend = Math.max(0, totalSpend - reimbursementCreditsSum);
+    const nettableCredits = filteredTransactions.filter(t => {
+      if (t.type !== "credit" || t.category === "salary") return false;
+      
+      const isExplicitlyLinked = allTxns.some(d => 
+        d.type === "debit" && 
+        (d.linkedTransactionHash === t.transactionHash || t.linkedTransactionHash === d.transactionHash)
+      );
+      return !isExplicitlyLinked;
+    });
+
+    const nettableCreditsSum = nettableCredits.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    totalSpend = Math.max(0, totalSpend - nettableCreditsSum);
   }
 
   // 3. Compute Inflows (Credits)
@@ -113,7 +134,7 @@ export function calculateSpendTotals(filteredTransactions, allTransactions, meta
  * @param {string} accountId - Active savings account ID
  * @returns {Array} List of calculated cycle analytics objects
  */
-export function calculateSalaryCycles(allTransactions, accountId) {
+export function calculateSalaryCycles(allTransactions, accountId, meta) {
   if (!allTransactions || !accountId) return [];
 
   // 1. Get all transactions for this savings account
@@ -127,17 +148,79 @@ export function calculateSalaryCycles(allTransactions, accountId) {
   
   if (salaryCredits.length < 1) return [];
 
+  // Consolidate close-together salary deposits within a 5-day window into a single boundary
+  const consolidatedSalaries = [];
+  for (const credit of salaryCredits) {
+    const creditDate = new Date(credit.date);
+    
+    if (consolidatedSalaries.length > 0) {
+      const lastGroup = consolidatedSalaries[consolidatedSalaries.length - 1];
+      const lastDate = new Date(lastGroup.date);
+      const diffDays = Math.round((creditDate - lastDate) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 5) {
+        lastGroup.amount += Number(credit.amount);
+        lastGroup.credits.push(credit);
+        continue;
+      }
+    }
+    
+    consolidatedSalaries.push({
+      date: credit.date,
+      amount: Number(credit.amount),
+      credits: [credit]
+    });
+  }
+
+  const closingBalance = Number(meta ? (meta.totalDue || meta.total_due || 0) : 0);
+  const openingBalanceKnown = closingBalance !== 0 && acctTxns.length > 0;
+
+  // Calculate running balance going backwards to get the initial balance
+  const balanceMap = {};
+  if (openingBalanceKnown) {
+    const descendingTxns = [...acctTxns].sort((a, b) => new Date(b.date) - new Date(a.date));
+    let currentBal = closingBalance;
+    for (const t of descendingTxns) {
+      balanceMap[t.transactionHash || t.transaction_hash] = currentBal;
+      const amt = Number(t.amount || 0);
+      if (t.type === "credit") {
+        currentBal -= amt;
+      } else {
+        currentBal += amt;
+      }
+    }
+  }
+
   const cycles = [];
+  let cumulativeSurplus = 0;
+
+  if (openingBalanceKnown) {
+    // Determine opening balance before the first consolidated salary group
+    if (consolidatedSalaries.length > 0 && Object.keys(balanceMap).length > 0) {
+      const firstGroup = consolidatedSalaries[0];
+      const oldestCredit = [...firstGroup.credits].sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+      if (oldestCredit) {
+        const hash = oldestCredit.transactionHash || oldestCredit.transaction_hash;
+        const balAfter = balanceMap[hash];
+        if (balAfter !== undefined) {
+          cumulativeSurplus = balAfter - Number(oldestCredit.amount || 0);
+        }
+      }
+    }
+  } else {
+    // Initialize cumulativeSurplus = 0 because the opening balance is unknown
+    cumulativeSurplus = 0;
+  }
   
-  for (let i = 0; i < salaryCredits.length; i++) {
-    const currentSalary = salaryCredits[i];
+  for (let i = 0; i < consolidatedSalaries.length; i++) {
+    const currentSalary = consolidatedSalaries[i];
     const startDate = new Date(currentSalary.date);
     
     let endDate = null;
     let isCurrentCycle = false;
     
-    if (i + 1 < salaryCredits.length) {
-      endDate = new Date(salaryCredits[i + 1].date);
+    if (i + 1 < consolidatedSalaries.length) {
+      endDate = new Date(consolidatedSalaries[i + 1].date);
     } else {
       isCurrentCycle = true;
       const txnDates = acctTxns.map(t => new Date(t.date)).filter(d => !isNaN(d.getTime()));
@@ -154,32 +237,69 @@ export function calculateSalaryCycles(allTransactions, accountId) {
       return true;
     });
     
-    const cycleSpend = cycleSpendTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    // Everything that left the account
+    const cycleSpend = cycleSpendTxns.reduce(
+      (sum, t) => sum + Number(t.amount || 0), 0
+    );
+    // Remove Strategy A (linked credit netting) entirely from cycleSpend
+    // Every debit counts at face value — no partial netting
     
-    // Get all roommate split/reimbursement credits during this cycle
-    const cycleReimbursementsTxns = acctTxns.filter(t => {
-      if (t.type !== "credit" || t.category !== "reimbursement") return false;
+    // All non-salary credits, grouped by category for display
+    const cycleCreditTxns = acctTxns.filter(t => {
+      if (t.type !== "credit" || t.category === "salary") return false;
       const tDate = new Date(t.date);
       if (isNaN(tDate.getTime())) return false;
       return tDate >= startDate && tDate < endDate;
     });
-    
-    const cycleReimbursements = cycleReimbursementsTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const netSpend = Math.max(0, cycleSpend - cycleReimbursements);
 
-    const endDisplay = i + 1 < salaryCredits.length 
-      ? new Date(salaryCredits[i + 1].date) 
+    // Group credits by category for the card breakdown display
+    const cycleCreditsByCategory = {};
+    for (const t of cycleCreditTxns) {
+      const cat = t.category || "other";
+      if (!cycleCreditsByCategory[cat]) {
+        cycleCreditsByCategory[cat] = { total: 0, count: 0 };
+      }
+      cycleCreditsByCategory[cat].total += Number(t.amount || 0);
+      cycleCreditsByCategory[cat].count += 1;
+    }
+
+    const cycleCreditsTotal = cycleCreditTxns.reduce(
+      (sum, t) => sum + Number(t.amount || 0), 0
+    );
+
+    // Total credited this cycle = salary + all other credits
+    const totalCredited = currentSalary.amount + cycleCreditsTotal;
+
+    // Saved = everything in minus everything out
+    const cycleSavings = totalCredited - cycleSpend;
+    cumulativeSurplus += cycleSavings;
+ 
+    const endDisplay = i + 1 < consolidatedSalaries.length 
+      ? new Date(consolidatedSalaries[i + 1].date) 
       : new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
       
     cycles.push({
-      salaryAmount: Number(currentSalary.amount),
+      salaryAmount: currentSalary.amount,
       salaryDate: startDate,
       endDate: endDisplay,
       spend: cycleSpend,
-      reimbursements: cycleReimbursements,
-      netSpend: netSpend,
-      isCurrent: isCurrentCycle
+      totalCredited: totalCredited,
+      cycleCreditsTotal: cycleCreditsTotal,
+      cycleCreditsByCategory: cycleCreditsByCategory,
+      cycleSavings: cycleSavings,
+      cumulativeSurplus: cumulativeSurplus,
+      isCurrent: isCurrentCycle,
+      openingBalanceKnown: openingBalanceKnown,
+      odLimit: Number(meta ? meta.odLimit : 0) || 0
     });
+  }
+
+  // After the forward loop completes, capture the final cumulativeSurplus
+  // value (the last cycle's cumulative total). Add this as a new field
+  // on every cycle object:
+  const finalSurplus = cycles.length > 0 ? cycles[cycles.length - 1].cumulativeSurplus : 0;
+  for (const c of cycles) {
+    c.finalSurplus = finalSurplus;
   }
 
   // Return chronologically descending (newest cycles first) for display

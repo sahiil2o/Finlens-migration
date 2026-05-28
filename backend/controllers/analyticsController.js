@@ -2,7 +2,7 @@
 // ANALYTICS CONTROLLER HANDLERS
 // ==========================================
 
-import { getTransactions } from "../database.js";
+import { getTransactions } from "../db/index.js";
 import {
   detectRecurringSubscriptions,
   getMonthKey,
@@ -16,11 +16,7 @@ import {
 export async function getSubscriptionsHandler(req, res) {
   try {
     const { accountId } = req.query;
-    let rows = await getTransactions();
-
-    if (accountId && accountId !== "all") {
-      rows = rows.filter(row => row.source_bank === accountId);
-    }
+    const rows = await getTransactions(accountId);
 
     const subscriptions = detectRecurringSubscriptions(rows);
     res.json(subscriptions);
@@ -37,11 +33,7 @@ export async function getSubscriptionsHandler(req, res) {
 export async function getTrendsHandler(req, res) {
   try {
     const { accountId } = req.query;
-    let rows = await getTransactions();
-
-    if (accountId && accountId !== "all") {
-      rows = rows.filter(row => row.source_bank === accountId);
-    }
+    const rows = await getTransactions(accountId);
 
     const monthsData = {};
 

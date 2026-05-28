@@ -9,6 +9,8 @@ import { renderCharts } from "../charts.js";
 import { refreshFilters } from "../filters.js";
 import { renderTrends } from "../trends.js";
 import { showToast } from "../ui.js";
+import { API_BASE } from "../config.js";
+import { saveAccountMeta } from "../metaStore.js";
 
 let pollingInterval = null;
 
@@ -49,7 +51,7 @@ export async function syncAndPoll() {
  */
 async function loadTransactionsFromDB() {
   try {
-    const response = await fetch("http://localhost:3000/transactions");
+    const response = await fetch(`${API_BASE}/transactions`);
     if (!response.ok) throw new Error("Failed to fetch transactions");
     
     const transactions = await response.json();
@@ -58,7 +60,7 @@ async function loadTransactionsFromDB() {
 
     // Sync and restore account metadata from the backend
     try {
-      const metaResponse = await fetch("http://localhost:3000/metadata");
+      const metaResponse = await fetch(`${API_BASE}/metadata`);
       if (metaResponse.ok) {
         const metaRows = await metaResponse.json();
         for (const meta of metaRows) {
@@ -74,7 +76,7 @@ async function loadTransactionsFromDB() {
             availableLimit: Number(meta.available_limit),
             odLimit: Number(meta.od_limit)
           };
-          localStorage.setItem(`meta_${meta.account_id}`, JSON.stringify(frontendMeta));
+          saveAccountMeta(frontendMeta);
         }
       }
     } catch (metaErr) {
@@ -113,7 +115,7 @@ async function loadVendorAnalytics() {
   try {
     const accountId = AppState.filters?.accountId || "";
     const response = await fetch(
-      `http://localhost:3000/vendors/top?accountId=${encodeURIComponent(accountId)}`
+      `${API_BASE}/vendors/top?accountId=${encodeURIComponent(accountId)}`
     );
 
     const vendors = await response.json();
@@ -130,7 +132,7 @@ async function loadSubscriptionAnalytics() {
   try {
     const accountId = AppState.filters?.accountId || "";
     const response = await fetch(
-      `http://localhost:3000/subscriptions?accountId=${encodeURIComponent(accountId)}`
+      `${API_BASE}/subscriptions?accountId=${encodeURIComponent(accountId)}`
     );
 
     const subscriptions = await response.json();

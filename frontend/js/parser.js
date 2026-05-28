@@ -2,6 +2,8 @@
 // HDFC STATEMENT PARSER (CREDIT & SAVINGS)
 // ==========================================
 
+import { saveAccountMeta } from "./metaStore.js";
+
 function cleanAmount(value) {
   if (!value) return 0;
   return parseFloat(value.replace(/,/g, "").trim()) || 0;
@@ -97,7 +99,7 @@ function parseHdfcCreditCard(text) {
   meta.accountId = accountId;
 
   // Persist metadata locally for multi-card limit layouts
-  localStorage.setItem(`meta_${accountId}`, JSON.stringify(meta));
+  saveAccountMeta(meta);
 
   const txnHeaderIndex = lines.findIndex(line =>
     line.includes("Transaction type") &&
@@ -176,7 +178,7 @@ function parseHdfcSavingsAccount(text) {
   };
 
   // Savings accounts don't have statement dues or limits
-  localStorage.setItem(`meta_${accountId}`, JSON.stringify(meta));
+  saveAccountMeta(meta);
 
   // Find standard HDFC savings transactions header
   const headerIdx = lines.findIndex(line => {

@@ -51,6 +51,7 @@ loadEnv();
 
 // Resolve variables
 const rawDbPath = process.env.DB_PATH || "finlens.db";
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:3b";
 
 // Export validated, type-safe configuration parameters
 export const PORT = Number(process.env.PORT) || 3000;
@@ -58,3 +59,4 @@ export const PORT = Number(process.env.PORT) || 3000;
 export const DB_PATH = path.isAbsolute(rawDbPath)
   ? rawDbPath
   : path.resolve(__dirname, rawDbPath);
+

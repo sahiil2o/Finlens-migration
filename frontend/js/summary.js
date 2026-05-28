@@ -3,6 +3,7 @@ import { calculateSpendTotals, calculateSalaryCycles } from "./calculator.js";
 import { renderStatCard } from "./components/StatCard.js";
 import { renderSalaryCycleCard } from "./components/SalaryCycleCard.js";
 import { renderAccountsStrip } from "./components/AccountsStrip.js";
+import { saveAccountMeta } from "./metaStore.js";
 
 // ===============================
 // DOM ELEMENTS
@@ -42,7 +43,7 @@ export function renderSummary() {
 
   if (healedLimit && meta.accountId) {
     meta.creditLimit = creditLimit;
-    localStorage.setItem(`meta_${meta.accountId}`, JSON.stringify(meta));
+    saveAccountMeta(meta);
   }
 
   // ===========================
@@ -167,7 +168,7 @@ export function renderSummary() {
   const salaryCycleSection = document.getElementById("salary-cycle-section");
   if (salaryCycleSection) {
     if (isSavingsAccount && meta.accountId) {
-      const cycles = calculateSalaryCycles(AppState.transactions || [], meta.accountId);
+      const cycles = calculateSalaryCycles(AppState.transactions || [], meta.accountId, meta);
       
       if (cycles.length >= 1) {
         salaryCycleSection.style.display = "flex";

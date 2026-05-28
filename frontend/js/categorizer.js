@@ -2,6 +2,7 @@
 // CATEGORY DEFINITIONS
 // ===============================
 import { AppState } from "./state.js";
+import { API_BASE } from "./config.js";
 
 export const CATEGORIES = {
 
@@ -26,7 +27,23 @@ export const CATEGORIES = {
       "bakes",
       "burger",
       "kfc",
-      "mcdonald"
+      "mcdonald",
+      "hotel",
+      "gongura",
+      "canteen",
+      "dhaba",
+      "kitchen",
+      "biryani",
+      "sweets",
+      "delight",
+      "foods",
+      "corner house",
+      "ice cream",
+      "ice c ream",
+      "icecream",
+      "gelato",
+      "momo lab",
+      "momo"
     ]
   },
 
@@ -59,7 +76,10 @@ export const CATEGORIES = {
       "decathlon",
       "zara",
       "lifestyle",
-      "fashion"
+      "fashion",
+      "delhivery",
+      "dtdc",
+      "blue dart"
     ]
   },
 
@@ -92,7 +112,14 @@ export const CATEGORIES = {
       "water",
       "tax",
       "emi",
-      "society"
+      "society",
+      "apple media",
+      "appleservices",
+      "apple services",
+      "apple.com/bill",
+      "atria convergence",
+      "act broadband",
+      "actcorp"
     ]
   },
 
@@ -144,10 +171,9 @@ export const CATEGORIES = {
     label: "Family Support",
     color: "#f43f5e",
     keywords: [
-      "swati",
-      "nilesh",
-      "nishita",
-      "talekar"
+      "swati talekar",
+      "nilesh talekar",
+      "nishita talekar"
     ]
   },
 
@@ -162,7 +188,11 @@ export const CATEGORIES = {
       "roommate",
       "refund",
       "reversal",
-      "cashback"
+      "cashback",
+      "veerabahu",
+      "bangaj",
+      "aditya",
+      "srivastava"
     ]
   },
 
@@ -188,7 +218,11 @@ export const CATEGORIES = {
       "flight",
       "metro",
       "indigo",
-      "rapido"
+      "rapido",
+      "indian railways",
+      "railsbi",
+      "railway",
+      "train"
     ]
   },
 
@@ -216,6 +250,20 @@ export const CATEGORIES = {
       "broker",
       "securities",
       "investment"
+    ]
+  },
+  
+  home: {
+    label: "Home Services",
+    color: "#d97706",
+    keywords: [
+      "urban company",
+      "urbanclap",
+      "home service",
+      "housejoy",
+      "plumber",
+      "carpenter",
+      "pest control"
     ]
   },
 
@@ -291,7 +339,7 @@ async function getAICategory(
     // ===============================
 
     const response = await fetch(
-      "http://localhost:3000/categorize",
+      `${API_BASE}/categorize`,
       {
         method: "POST",
 
@@ -353,6 +401,28 @@ export function categorizeTransactions(
       detectCategory(
         transaction.description
       );
+
+    // Special custom overrides for family support vs splits
+    const descLower = (transaction.description || "").toLowerCase();
+    const isTrueFamily =
+      (descLower.includes("talekar") &&
+        (descLower.includes("swati") ||
+          descLower.includes("nilesh") ||
+          descLower.includes("nishita"))) ||
+      descLower.includes("swati talekar") ||
+      descLower.includes("nilesh talekar") ||
+      descLower.includes("nishita talekar");
+
+    if (isTrueFamily) {
+      if (transaction.type === "debit") {
+        category = "family";
+      } else {
+        category = "reimbursement"; // Credits linked to bill payments go to reimbursement
+      }
+    } else if (category === "family") {
+      // Coerce any accidental family matches to other
+      category = "other";
+    }
 
     // For credits, if they don't match any specific rule-based category, default to payment
     if (transaction.type === "credit" && category === "other") {

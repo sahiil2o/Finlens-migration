@@ -7,7 +7,7 @@ import {
   getVendorByNormalizedName,
   updateVendorCategory,
   clearTransactionsAndVendors
-} from "../database.js";
+} from "../db/index.js";
 
 import { categorizeVendor, loadCache, saveCache } from "../ai.js";
 

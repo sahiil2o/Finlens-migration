@@ -17,10 +17,12 @@ export function normalizeTransactions(rows) {
 
     return {
       ...row,
+      transactionHash: row.transaction_hash,
       description: row.merchant,
       normalizedMerchant: row.normalized_merchant,
       sourceBank: row.source_bank,
       statementDate: row.statement_date,
+      linkedTransactionHash: row.linked_transaction_hash,
       dateString
     };
   });
@@ -32,22 +34,45 @@ export function normalizeTransactions(rows) {
  * @param {Object} transaction - Transaction record
  * @returns {boolean} True if it is a spend outflow
  */
+export const EXCLUDED_MERCHANT_PATTERNS = [
+  "autopay",
+  "thank you",
+  "credit card",
+  "card payment",
+  "cc payment",
+  "payment received",
+  "cashback",
+  "reversal",
+  "refund"
+];
+
 export function isSpendTransaction(transaction) {
   if (transaction.type !== "debit") return false;
 
   const description = transaction.merchant?.toLowerCase() || "";
-  const excludedPatterns = [
-    "autopay",
-    "thank you",
-    "credit card",
-    "card payment",
-    "cc payment",
-    "refund",
-    "reversal",
-    "cashback"
-  ];
 
-  return !excludedPatterns.some(pattern => description.includes(pattern));
+  return !EXCLUDED_MERCHANT_PATTERNS.some(pattern => description.includes(pattern));
+}
+
+/**
+ * Slices transactions chronologically and detects monthly recurring subscription patterns.
+ * 
+ * @param {Array} transactions - List of transactions
+ * @returns {Array} List of detected subscriptions
+ */
+export function getBrandName(merchant) {
+  if (!merchant) return "";
+  const m = merchant.toLowerCase();
+  if (m.includes("netflix")) return "netflix";
+  if (m.includes("spotify")) return "spotify";
+  if (m.includes("youtube")) return "youtube";
+  if (m.includes("apple")) return "apple";
+  if (m.includes("amazon prime") || m.includes("prime video") || m.includes("prime member")) return "amazon prime";
+  if (m.includes("hotstar")) return "hotstar";
+  if (m.includes("google")) return "google";
+  if (m.includes("jio")) return "jio";
+  if (m.includes("airtel")) return "airtel";
+  return merchant;
 }
 
 /**
@@ -65,31 +90,47 @@ export function detectRecurringSubscriptions(transactions) {
     const merchant = transaction.normalized_merchant;
     if (!merchant) continue;
 
-    if (!grouped[merchant]) {
-      grouped[merchant] = [];
+    const brand = getBrandName(merchant);
+    if (!grouped[brand]) {
+      grouped[brand] = [];
     }
-    grouped[merchant].push(transaction);
+    grouped[brand].push(transaction);
   }
 
   const subscriptions = [];
   const utilityKeywords = ["utility", "telecom", "bill", "electricity", "broadband", "mobile", "power", "recharge", "gas", "water", "insurance"];
 
-  for (const [merchant, vendorTransactions] of Object.entries(grouped)) {
+  for (const [brandKey, vendorTransactions] of Object.entries(grouped)) {
     if (vendorTransactions.length < 2) continue;
 
     // Sort by date ascending
     vendorTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // 1. Calculate Gaps & Filter Anomalies (Ignore failed transaction retry loops < 3 days)
+    // Focus on the latest transaction's amount to ignore historical plan/tier pricing outliers
+    const latestTxn = vendorTransactions[vendorTransactions.length - 1];
+    const latestAmount = Number(latestTxn.amount);
+    
+    const merchantLower = (latestTxn.merchant || "").toLowerCase();
+    const isUtility = utilityKeywords.some(keyword => merchantLower.includes(keyword)) || 
+                      (latestTxn.category === "bills" || latestTxn.category === "rent");
+    const varianceLimit = isUtility ? 0.45 : 0.15; // 45% variance limit for utilities, 15% for SaaS
+
+    const activeTxns = vendorTransactions.filter(t => {
+      const diff = Math.abs(Number(t.amount) - latestAmount);
+      return diff <= (latestAmount * varianceLimit);
+    });
+
+    if (activeTxns.length < 2) continue;
+
+    // 1. Calculate Gaps & Filter Retry Anomalies
     const rawGaps = [];
-    for (let i = 1; i < vendorTransactions.length; i++) {
-      const prev = new Date(vendorTransactions[i - 1].date);
-      const curr = new Date(vendorTransactions[i].date);
+    for (let i = 1; i < activeTxns.length; i++) {
+      const prev = new Date(activeTxns[i - 1].date);
+      const curr = new Date(activeTxns[i].date);
       const days = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
       rawGaps.push(days);
     }
 
-    // Filter retry anomalies
     const filteredGaps = rawGaps.filter(gap => gap >= 3);
     if (filteredGaps.length < 1) continue;
 
@@ -128,30 +169,16 @@ export function detectRecurringSubscriptions(transactions) {
     const gapMatchRatio = matchingGaps.length / filteredGaps.length;
     if (gapMatchRatio < 0.7) continue;
 
-    // 4. Calculate Average Amount
-    const avgAmount = vendorTransactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0) / vendorTransactions.length;
+    // 4. Calculate Average Amount (using the filtered active list)
+    const avgAmount = activeTxns.reduce((sum, t) => sum + Number(t.amount), 0) / activeTxns.length;
 
-    // 5. Utility vs SaaS Amount Variance Check
-    const merchantLower = (vendorTransactions[0].merchant || "").toLowerCase();
-    const isUtility = utilityKeywords.some(keyword => merchantLower.includes(keyword)) || 
-                      (vendorTransactions[0].category === "bills" || vendorTransactions[0].category === "rent");
-
-    const varianceLimit = isUtility ? 0.45 : 0.15; // 45% variance limit for utilities, 15% for flat-rate SaaS
-
-    const similarAmounts = vendorTransactions.every(transaction => {
-      const diff = Math.abs(Number(transaction.amount) - avgAmount);
-      return diff <= (avgAmount * varianceLimit);
-    });
-
-    if (!similarAmounts) continue;
-
-    // 6. Detailed Confidence Scoring
-    let confidence = 50;
+    // 5. Confidence Scoring
+    let confidence = 55;
 
     // Length weights
-    if (vendorTransactions.length === 3) confidence += 15;
-    else if (vendorTransactions.length === 4) confidence += 20;
-    else if (vendorTransactions.length >= 5) confidence += 30;
+    if (activeTxns.length === 3) confidence += 15;
+    else if (activeTxns.length === 4) confidence += 20;
+    else if (activeTxns.length >= 5) confidence += 30;
 
     // Gap consistency weight
     const gapDeviations = filteredGaps.map(gap => Math.abs(gap - medianGap));
@@ -161,20 +188,27 @@ export function detectRecurringSubscriptions(transactions) {
 
     // SaaS amount stability bonus
     if (!isUtility) {
-      const amountDeviations = vendorTransactions.map(t => Math.abs(Number(t.amount) - avgAmount));
+      const amountDeviations = activeTxns.map(t => Math.abs(Number(t.amount) - avgAmount));
       const avgAmtDeviation = amountDeviations.reduce((a, b) => a + b, 0) / amountDeviations.length;
       if (avgAmtDeviation <= avgAmount * 0.05) confidence += 10;
     }
 
     confidence = Math.min(Math.max(confidence, 40), 99);
 
+    // Format display name nicely
+    let displayName = latestTxn.merchant;
+    if (brandKey === "netflix") displayName = "Netflix";
+    else if (brandKey === "spotify") displayName = "Spotify";
+    else if (brandKey === "youtube") displayName = "YouTube";
+    else if (brandKey === "amazon prime") displayName = "Amazon Prime";
+
     subscriptions.push({
-      merchant,
-      displayName: vendorTransactions[0].merchant,
-      category: vendorTransactions[0].category,
-      recurringCount: vendorTransactions.length,
+      merchant: brandKey,
+      displayName,
+      category: activeTxns[0].category,
+      recurringCount: activeTxns.length,
       averageAmount: avgAmount,
-      lastCharge: vendorTransactions.at(-1).date,
+      lastCharge: activeTxns.at(-1).date,
       averageGapDays: Math.round(filteredGaps.reduce((a, b) => a + b, 0) / filteredGaps.length),
       confidence,
       frequency

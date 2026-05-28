@@ -16,7 +16,7 @@ export function applyFiltersEngine(transactions, criteria) {
   let filtered = [...transactions];
 
   // 1. MONTH / DATE SLICER FILTER
-  if (month) {
+  if (month && month !== "all") {
     if (month.startsWith("stmt:")) {
       const targetStmt = month.replace("stmt:", "");
       filtered = filtered.filter(t => t.statementDate === targetStmt);
@@ -30,12 +30,26 @@ export function applyFiltersEngine(transactions, criteria) {
         const m = String(d.getMonth() + 1).padStart(2, '0');
         return `${year}-${m}` === targetMonth;
       });
+    } else if (month.startsWith("cycle:")) {
+      const [startStr, endStr] = month.replace("cycle:", "").split("_");
+      const startDate = new Date(startStr);
+      const endDate = new Date(endStr);
+      filtered = filtered.filter(t => {
+        if (!t.date) return false;
+        const tDate = new Date(t.date);
+        if (isNaN(tDate.getTime())) return false;
+        return tDate >= startDate && tDate < endDate;
+      });
     }
   }
 
   // 2. ACCOUNT / CARD FILTER
-  if (accountId) {
-    filtered = filtered.filter(t => t.sourceBank === accountId);
+  if (accountId && accountId !== "all") {
+    if (accountId === "HDFC Credit Card") {
+      filtered = filtered.filter(t => t.sourceBank && t.sourceBank.includes("CC"));
+    } else {
+      filtered = filtered.filter(t => t.sourceBank === accountId);
+    }
   }
 
   // 3. SEARCH FILTER
@@ -43,7 +57,8 @@ export function applyFiltersEngine(transactions, criteria) {
     const searchLower = search.toLowerCase().trim();
     filtered = filtered.filter(transaction => {
       const description = transaction.description || "";
-      return description.toLowerCase().includes(searchLower);
+      const sourceBank = transaction.sourceBank || "";
+      return description.toLowerCase().includes(searchLower) || sourceBank.toLowerCase().includes(searchLower);
     });
   }
 

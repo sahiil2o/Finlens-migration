@@ -1,5 +1,7 @@
 import { AppState } from "./state.js";
 import { applyFiltersEngine } from "./utils/filterEngine.js";
+import { calculateSalaryCycles } from "./calculator.js";
+import { getAccountMeta } from "./metaStore.js";
 
 // ===============================
 // DOM ELEMENTS
@@ -187,14 +189,19 @@ export function populateMonthFilter() {
   const accountId = AppState.filters?.accountId || "";
   const transactions = AppState.transactions || [];
 
-  const acctTxns = transactions.filter(t => !accountId || t.sourceBank === accountId);
+  const acctTxns = transactions.filter(t => {
+    if (!accountId || accountId === "all") return true;
+    if (accountId === "HDFC Credit Card") return t.sourceBank && t.sourceBank.includes("CC");
+    return t.sourceBank === accountId;
+  });
   if (!acctTxns.length) {
     monthFilter.innerHTML = `<option value="">All cycles</option>`;
     monthFilter.value = "";
     return;
   }
 
-  const isCC = accountId.includes("CC");
+  const isCC = accountId.includes("CC") || accountId === "HDFC Credit Card";
+  const isSavings = accountId.includes("Savings");
 
   const parseDateStr = (dateStr) => {
     if (!dateStr) return new Date(0);
@@ -228,13 +235,26 @@ export function populateMonthFilter() {
         // Start date is 13th of previous month
         const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 13);
         
-        const label = `${formatDateLabel(startDate)} - ${formatDateLabel(endDate)}`;
+        // Billing period ends the day before statement date
+        const displayEndDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+        
+        const label = `${formatDateLabel(startDate)} - ${formatDateLabel(displayEndDate)}`;
         options.push({ value: `stmt:${stmt}`, label });
       }
     }
+  } else if (isSavings) {
+    const savedMeta = getAccountMeta(accountId) || AppState.meta || {};
+    const cycles = calculateSalaryCycles(transactions, accountId, savedMeta);
+    for (const cycle of cycles) {
+      const startStr = cycle.salaryDate.toISOString().split("T")[0];
+      const endStr = cycle.endDate.toISOString().split("T")[0];
+      
+      const label = `${formatDateLabel(cycle.salaryDate)} - ${formatDateLabel(cycle.endDate)}`;
+      options.push({ value: `cycle:${startStr}_${endStr}`, label });
+    }
   }
 
-  // Fallback to calendar months if not CC or if CC has no statement dates
+  // Fallback to calendar months if not CC/Savings or if they have no cycles
   if (options.length === 0) {
     const months = [...new Set(acctTxns.map(t => {
       if (!t.date) return null;
@@ -257,13 +277,14 @@ export function populateMonthFilter() {
 
   // Populate dropdown
   monthFilter.innerHTML = `
+    <option value="all">All time</option>
     ${options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
   `;
 
-  // Always default to the most recent cycle (the first option) on selection/refresh
+  // Always default to the most recent cycle (the first option) on selection/refresh unless "all" or specific is selected
   if (options.length > 0) {
     const currentValue = AppState.filters?.month || "";
-    const hasCurrent = options.some(opt => opt.value === currentValue);
+    const hasCurrent = options.some(opt => opt.value === currentValue) || currentValue === "all";
     if (hasCurrent) {
       monthFilter.value = currentValue;
     } else {
@@ -271,8 +292,8 @@ export function populateMonthFilter() {
       AppState.filters.month = options[0].value;
     }
   } else {
-    monthFilter.value = "";
-    AppState.filters.month = "";
+    monthFilter.value = "all";
+    AppState.filters.month = "all";
   }
 }
 

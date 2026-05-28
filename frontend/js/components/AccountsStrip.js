@@ -4,6 +4,7 @@
 
 import { AppState } from "../state.js";
 import { renderOverviewSelectorCard, renderAccountSelectorCard } from "./AccountCard.js";
+import { getAccountMeta, saveAccountMeta } from "../metaStore.js";
 
 /**
  * Builds and renders the linked cards/accounts strip carousel.
@@ -14,14 +15,34 @@ export function renderAccountsStrip() {
   const container = document.getElementById("accounts-strip");
   if (!container) return;
 
-  const transactions = AppState.transactions || [];
-  if (!transactions.length) {
+  const rawTransactions = AppState.transactions || [];
+  if (!rawTransactions.length) {
     container.innerHTML = "";
     return;
   }
 
-  // Find all unique loaded account IDs (sourceBank)
-  const uniqueAccounts = [...new Set(transactions.map(t => t.sourceBank))].filter(Boolean).sort();
+  const rawAccounts = [...new Set(rawTransactions.map(t => t.sourceBank))].filter(Boolean);
+  
+  const uniqueAccounts = [];
+  let hasCC = false;
+  const ccAccounts = [];
+
+  for (const acct of rawAccounts) {
+    if (acct.includes("CC")) {
+      hasCC = true;
+      ccAccounts.push(acct);
+    } else {
+      uniqueAccounts.push(acct);
+    }
+  }
+
+  if (hasCC) {
+    uniqueAccounts.push("HDFC Credit Card");
+  }
+  uniqueAccounts.sort();
+
+  // Use currently filtered transactions for calculation of cycle-specific spend balances!
+  const transactions = AppState.filteredTransactions || [];
 
   const accountSpends = {};
   for (const acct of uniqueAccounts) {
@@ -43,7 +64,11 @@ export function renderAccountsStrip() {
     if (isSpend(t)) {
       totalSpendAll += Number(t.amount) || 0;
       if (t.sourceBank) {
-        accountSpends[t.sourceBank] = (accountSpends[t.sourceBank] || 0) + (Number(t.amount) || 0);
+        if (t.sourceBank.includes("CC")) {
+          accountSpends["HDFC Credit Card"] = (accountSpends["HDFC Credit Card"] || 0) + (Number(t.amount) || 0);
+        } else {
+          accountSpends[t.sourceBank] = (accountSpends[t.sourceBank] || 0) + (Number(t.amount) || 0);
+        }
       }
     }
   }
@@ -71,25 +96,29 @@ export function renderAccountsStrip() {
     let balLabel = "Spend";
     let balValue = accountSpends[acct] || 0;
     
-    if (acct.includes("CC")) {
-      const parts = acct.split(" ");
-      const last4 = parts[parts.length - 1];
+    if (acct === "HDFC Credit Card") {
+      const last4s = ccAccounts.map(b => b.split(" ").pop()).sort().join(", ");
       title = `Credit Card (HDFC)`;
-      subtitle = `Ending in •••• ${last4}`;
-      try {
-        const savedMeta = JSON.parse(localStorage.getItem(`meta_${acct}`));
-        if (savedMeta && savedMeta.totalDue) {
-          balLabel = "Due";
-          balValue = Number(savedMeta.totalDue);
-        }
-      } catch {}
+      subtitle = `Ending in •••• ${last4s}`;
+      
+      let ccDueSum = 0;
+      for (const cc of ccAccounts) {
+        try {
+          const savedMeta = getAccountMeta(cc);
+          if (savedMeta && savedMeta.totalDue) {
+            ccDueSum += Number(savedMeta.totalDue);
+          }
+        } catch {}
+      }
+      balLabel = "Due";
+      balValue = ccDueSum;
     } else if (acct.includes("Savings")) {
       const parts = acct.split(" ");
       const last4 = parts[parts.length - 1];
       title = `Savings Account`;
       subtitle = `Ending in •••• ${last4}`;
       try {
-        const savedMeta = JSON.parse(localStorage.getItem(`meta_${acct}`));
+        const savedMeta = getAccountMeta(acct);
         if (savedMeta) {
           if (Number(savedMeta.odLimit) > 0) {
             balLabel = "Available";
@@ -125,15 +154,59 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
   };
 
   if (accountId) {
-    try {
-      const savedMeta = JSON.parse(localStorage.getItem(`meta_${accountId}`));
-      if (savedMeta) {
-        AppState.meta = savedMeta;
-      } else {
+    if (accountId === "HDFC Credit Card") {
+      const uniqueCcs = [...new Set((AppState.transactions || []).map(t => t.sourceBank))].filter(b => b && b.includes("CC"));
+      let totalDueSum = 0;
+      let creditLimitSum = 230000; // Shared limit
+      let latestStmtDate = "";
+      let latestDueDate = "";
+      const last4s = uniqueCcs.map(cc => cc.split(" ").pop()).sort().join(", ");
+      
+      const parseDateStr = (dateStr) => {
+        if (!dateStr) return new Date(0);
+        const parts = dateStr.split("/");
+        if (parts.length === 3) {
+          let [dd, mm, yyyy] = parts;
+          if (yyyy.length === 2) yyyy = "20" + yyyy;
+          return new Date(`${yyyy}-${mm}-${dd}`);
+        }
+        return new Date(dateStr);
+      };
+
+      let newestDate = new Date(0);
+      for (const cc of uniqueCcs) {
+        const savedMeta = getAccountMeta(cc);
+        if (savedMeta) {
+          totalDueSum += Number(savedMeta.totalDue) || 0;
+          const stmtD = parseDateStr(savedMeta.stmtDate);
+          if (stmtD > newestDate) {
+            newestDate = stmtD;
+            latestStmtDate = savedMeta.stmtDate;
+            latestDueDate = savedMeta.dueDate;
+          }
+        }
+      }
+      
+      AppState.meta = {
+        accountId: "HDFC Credit Card",
+        accountType: "credit",
+        totalDue: totalDueSum,
+        creditLimit: creditLimitSum,
+        cardLast4: last4s,
+        stmtDate: latestStmtDate,
+        dueDate: latestDueDate
+      };
+    } else {
+      try {
+        const savedMeta = getAccountMeta(accountId);
+        if (savedMeta) {
+          AppState.meta = savedMeta;
+        } else {
+          AppState.meta = { accountId };
+        }
+      } catch {
         AppState.meta = { accountId };
       }
-    } catch {
-      AppState.meta = { accountId };
     }
   } else {
     // Overview aggregates credit cards (handling shared limit)
@@ -143,7 +216,7 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
     
     for (const cc of uniqueCcs) {
       try {
-        const savedMeta = JSON.parse(localStorage.getItem(`meta_${cc}`));
+        const savedMeta = getAccountMeta(cc);
         
         const parseDateStr = (dateStr) => {
           if (!dateStr) return new Date(0);
@@ -166,7 +239,7 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
             const ccTxns = ccTxnsAll.filter(t => t.type === "debit" && (!latestStmt || t.statementDate === latestStmt));
             ccDue = ccTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
             savedMeta.totalDue = ccDue;
-            localStorage.setItem(`meta_${cc}`, JSON.stringify(savedMeta));
+            saveAccountMeta(savedMeta);
           }
           totalDueSum += ccDue;
 
@@ -174,7 +247,7 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
           if (limit === 0) {
             limit = 150000;
             savedMeta.creditLimit = limit;
-            localStorage.setItem(`meta_${cc}`, JSON.stringify(savedMeta));
+            saveAccountMeta(savedMeta);
           }
           creditLimitSum = Math.max(creditLimitSum, limit);
         } else {
@@ -187,7 +260,7 @@ window.selectAccount = async function(accountId, skipSyncAndPoll = false) {
           const ccDue = ccTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
           
           const fallbackCC = { accountId: cc, totalDue: ccDue, creditLimit: 150000, accountType: "credit" };
-          localStorage.setItem(`meta_${cc}`, JSON.stringify(fallbackCC));
+          saveAccountMeta(fallbackCC);
           totalDueSum += ccDue;
           creditLimitSum = Math.max(creditLimitSum, 150000);
         }

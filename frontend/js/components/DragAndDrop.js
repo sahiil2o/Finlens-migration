@@ -58,20 +58,25 @@ export function setupDragAndDrop(elements, onFileDropped) {
 
     if (!event.dataTransfer) return;
 
-    let file = null;
+    const files = [];
     if (event.dataTransfer.items) {
-      const item = event.dataTransfer.items[0];
-      if (item && item.kind === 'file') {
-        file = item.getAsFile();
+      for (let i = 0; i < event.dataTransfer.items.length; i++) {
+        const item = event.dataTransfer.items[i];
+        if (item && item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
       }
     }
 
-    if (!file && event.dataTransfer.files) {
-      file = event.dataTransfer.files[0];
+    if (files.length === 0 && event.dataTransfer.files) {
+      for (let i = 0; i < event.dataTransfer.files.length; i++) {
+        files.push(event.dataTransfer.files[i]);
+      }
     }
 
-    if (file) {
-      onFileDropped(file);
+    if (files.length > 0) {
+      onFileDropped(files);
     }
   }
 }

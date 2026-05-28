@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 
-import { initializeDatabase } from "./database.js";
+import { initializeDatabase } from "./db/index.js";
 import { PORT } from "./config.js";
 
 import transactionsRouter from "./routes/transactions.js";
@@ -18,6 +18,7 @@ initializeDatabase();
 // ===============================
 app.use(cors());
 app.use(express.json());
+app.use(express.raw({ type: "application/octet-stream", limit: "10mb" }));
 
 // ===============================
 // HEALTH CHECK
