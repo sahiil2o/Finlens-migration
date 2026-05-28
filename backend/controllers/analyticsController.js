@@ -13,16 +13,20 @@ import {
  * GET /subscriptions
  * Detects chronic recurring monthly subscription debits from loaded transaction logs.
  */
-export async function getSubscriptionsHandler(req, res) {
+export async function getSubscriptionsHandler(req, res, next) {
   try {
     const { accountId } = req.query;
+    if (accountId !== undefined && typeof accountId !== "string") {
+      const err = new Error("accountId query parameter must be a string");
+      err.status = 400;
+      return next(err);
+    }
     const rows = await getTransactions(accountId);
 
     const subscriptions = detectRecurringSubscriptions(rows);
     res.json(subscriptions);
   } catch (error) {
-    console.error("[AnalyticsController] getSubscriptions failed:", error);
-    res.status(500).json({ error: "Failed to detect subscriptions" });
+    next(error);
   }
 }
 
@@ -30,9 +34,14 @@ export async function getSubscriptionsHandler(req, res) {
  * GET /analytics/trends
  * Compiles chronological category distributions, monthly net balances, and forecast calculations.
  */
-export async function getTrendsHandler(req, res) {
+export async function getTrendsHandler(req, res, next) {
   try {
     const { accountId } = req.query;
+    if (accountId !== undefined && typeof accountId !== "string") {
+      const err = new Error("accountId query parameter must be a string");
+      err.status = 400;
+      return next(err);
+    }
     const rows = await getTransactions(accountId);
 
     const monthsData = {};
@@ -165,9 +174,6 @@ export async function getTrendsHandler(req, res) {
       }
     });
   } catch (error) {
-    console.error("[AnalyticsController] getTrends failed:", error);
-    res.status(500).json({
-      error: "Failed to compile trend analytics"
-    });
+    next(error);
   }
 }

@@ -52,6 +52,10 @@ loadEnv();
 // Resolve variables
 const rawDbPath = process.env.DB_PATH || "finlens.db";
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:3b";
+export const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
+export const FILE_LIMIT = process.env.FILE_LIMIT || "10mb";
+export const LOG_LEVEL = process.env.LOG_LEVEL || "info";
+export const NODE_ENV = process.env.NODE_ENV || "development";
 
 // Export validated, type-safe configuration parameters
 export const PORT = Number(process.env.PORT) || 3000;
@@ -59,4 +63,28 @@ export const PORT = Number(process.env.PORT) || 3000;
 export const DB_PATH = path.isAbsolute(rawDbPath)
   ? rawDbPath
   : path.resolve(__dirname, rawDbPath);
+
+// Startup configurations validation logic
+const validLogLevels = ["debug", "info", "warn", "error"];
+if (!validLogLevels.includes(LOG_LEVEL.toLowerCase())) {
+  console.warn(`[Config WARNING] Invalid LOG_LEVEL configuration: "${LOG_LEVEL}". Defaulting to "info".`);
+}
+
+if (isNaN(PORT) || PORT < 1 || PORT > 65535) {
+  console.error(`[Config ERROR] Invalid PORT configuration: "${process.env.PORT || PORT}". Port must be an integer between 1 and 65535.`);
+  process.exit(1);
+}
+
+try {
+  new URL(OLLAMA_URL);
+} catch (err) {
+  console.error(`[Config ERROR] Invalid OLLAMA_URL configuration format: "${OLLAMA_URL}". Must be a valid URL string.`);
+  process.exit(1);
+}
+
+if (typeof FILE_LIMIT !== "string" || !/^\d+(b|kb|mb|gb)$/i.test(FILE_LIMIT)) {
+  console.warn(`[Config WARNING] Unexpected FILE_LIMIT format: "${FILE_LIMIT}". Standard formats are e.g., "10mb", "500kb".`);
+}
+
+console.log(`[Config] Startup validation check: DB_PATH=${DB_PATH}, OLLAMA_MODEL=${OLLAMA_MODEL}, OLLAMA_URL=${OLLAMA_URL}, PORT=${PORT}, LOG_LEVEL=${LOG_LEVEL}`);
 

@@ -16,7 +16,7 @@ const CACHE_PATH =
 // VALID CATEGORIES
 // ===============================
 
-const VALID_CATEGORIES = [
+export const VALID_CATEGORIES = [
   "food",
   "grocery",
   "shopping",
@@ -39,29 +39,18 @@ const VALID_CATEGORIES = [
 // LOAD CACHE
 // ===============================
 
-export function loadCache() {
-
+export async function loadCache() {
   try {
-
-    if (
-      !fs.existsSync(CACHE_PATH)
-    ) {
-
-      fs.writeFileSync(
-        CACHE_PATH,
-        "{}"
-      );
+    const content = await fs.promises.readFile(CACHE_PATH, "utf-8");
+    return JSON.parse(content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      try {
+        await fs.promises.writeFile(CACHE_PATH, "{}", "utf-8");
+      } catch (writeErr) {
+        console.error("[AI] Failed to initialize vendor cache file:", writeErr);
+      }
     }
-
-    return JSON.parse(
-      fs.readFileSync(
-        CACHE_PATH,
-        "utf-8"
-      )
-    );
-
-  } catch {
-
     return {};
   }
 }
@@ -70,16 +59,16 @@ export function loadCache() {
 // SAVE CACHE
 // ===============================
 
-export function saveCache(cache) {
-
-  fs.writeFileSync(
-    CACHE_PATH,
-    JSON.stringify(
-      cache,
-      null,
-      2
-    )
-  );
+export async function saveCache(cache) {
+  try {
+    await fs.promises.writeFile(
+      CACHE_PATH,
+      JSON.stringify(cache, null, 2),
+      "utf-8"
+    );
+  } catch (err) {
+    console.error("[AI] Failed to save vendor cache file:", err);
+  }
 }
 
 // ===============================
@@ -233,7 +222,7 @@ export async function categorizeVendor(
   }
 
   const cache =
-    loadCache();
+    await loadCache();
 
   // ===============================
   // CACHE HIT
@@ -336,7 +325,7 @@ export async function categorizeVendor(
     cache[normalized] =
       category;
 
-    saveCache(cache);
+    await saveCache(cache);
 
     console.log(
       "CACHE SAVED:",
