@@ -67,45 +67,73 @@ function runMigrations() {
             return;
           }
           const migration = pending[i];
-          console.log(`[Migration] Applying database migration [${migration.id}]: ${migration.name}...`);
-          
-          db.serialize(() => {
-            db.run("BEGIN TRANSACTION;", (err) => {
-              if (err) {
-                console.error(`[Migration] Failed to begin transaction for migration [${migration.id}]`, err);
+
+          // Dynamically sniff schema using PRAGMA table_info to avoid duplicate column execution attempts
+          db.all("PRAGMA table_info(transactions);", (err, columns) => {
+            if (err) {
+              console.error(`[Migration] Failed to query schema table info:`, err);
+              i++;
+              next();
+              return;
+            }
+
+            const columnNames = new Set((columns || []).map(c => c.name));
+            const isDuplicateColumn = migration.id === 1 && columnNames.has("linked_transaction_hash");
+
+            if (isDuplicateColumn) {
+              console.log(`[Migration] Column "linked_transaction_hash" already exists in "transactions". Marking migration [${migration.id}] as satisfied.`);
+              
+              db.run("INSERT OR IGNORE INTO db_migrations (id, name) VALUES (?, ?);", [migration.id, migration.name], (err) => {
+                if (err) {
+                  console.error(`[Migration] Failed to record pre-existing satisfied migration [${migration.id}]: ${migration.name}`, err);
+                } else {
+                  console.log(`[Migration] Migration [${migration.id}] recorded as satisfied successfully.`);
+                }
                 i++;
                 next();
-                return;
-              }
+              });
+              return;
+            }
 
-              db.run(migration.sql, (err) => {
+            console.log(`[Migration] Applying database migration [${migration.id}]: ${migration.name}...`);
+            db.serialize(() => {
+              db.run("BEGIN TRANSACTION;", (err) => {
                 if (err) {
-                  console.error(`[Migration] Migration failed [${migration.id}]: ${migration.name}. Rolling back.`, err);
-                  db.run("ROLLBACK;", () => {
-                    i++;
-                    next();
-                  });
+                  console.error(`[Migration] Failed to begin transaction for migration [${migration.id}]`, err);
+                  i++;
+                  next();
                   return;
                 }
 
-                db.run("INSERT INTO db_migrations (id, name) VALUES (?, ?);", [migration.id, migration.name], (err) => {
+                db.run(migration.sql, (err) => {
                   if (err) {
-                    console.error(`[Migration] Failed to record migration [${migration.id}]: ${migration.name}. Rolling back.`, err);
+                    console.error(`[Migration] Migration failed [${migration.id}]: ${migration.name}. Rolling back.`, err);
                     db.run("ROLLBACK;", () => {
                       i++;
                       next();
                     });
-                  } else {
-                    db.run("COMMIT;", (err) => {
-                      if (err) {
-                        console.error(`[Migration] Failed to commit migration [${migration.id}]: ${migration.name}`, err);
-                      } else {
-                        console.log(`[Migration] Migration applied successfully [${migration.id}]: ${migration.name}`);
-                      }
-                      i++;
-                      next();
-                    });
+                    return;
                   }
+
+                  db.run("INSERT INTO db_migrations (id, name) VALUES (?, ?);", [migration.id, migration.name], (err) => {
+                    if (err) {
+                      console.error(`[Migration] Failed to record migration [${migration.id}]: ${migration.name}. Rolling back.`, err);
+                      db.run("ROLLBACK;", () => {
+                        i++;
+                        next();
+                      });
+                    } else {
+                      db.run("COMMIT;", (err) => {
+                        if (err) {
+                          console.error(`[Migration] Failed to commit migration [${migration.id}]: ${migration.name}`, err);
+                        } else {
+                          console.log(`[Migration] Migration applied successfully [${migration.id}]: ${migration.name}`);
+                        }
+                        i++;
+                        next();
+                      });
+                    }
+                  });
                 });
               });
             });
